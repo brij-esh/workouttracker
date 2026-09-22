@@ -6,12 +6,13 @@ import { ApiService } from '../core/api.service';
 import { RegionService } from '../core/region.service';
 import { NotificationBadgeService } from '../core/notification-badge.service';
 import { ActiveWorkoutSessionService } from '../core/active-workout-session.service';
+import { WorkoutOsNotificationService } from '../core/workout-os-notification.service';
+import { OfflineOutboxService } from '../core/offline-outbox.service';
 import { canResumePausedWorkout } from '../core/date-window';
 import { APP_BRAND } from '../core/app-brand';
 import { ToastHostComponent } from '../core/toast-host.component';
 import { ActiveWorkoutFabComponent } from '../core/active-workout-fab.component';
 import { ConfirmDialogHostComponent } from '../core/confirm-dialog-host.component';
-import { OfflineOutboxService } from '../core/offline-outbox.service';
 
 @Component({
   selector: 'app-shell',
@@ -32,12 +33,15 @@ export class ShellComponent implements OnInit {
   readonly brand = APP_BRAND;
   readonly badge = inject(NotificationBadgeService);
   readonly outbox = inject(OfflineOutboxService);
+  readonly session = inject(ActiveWorkoutSessionService);
   private readonly api = inject(ApiService);
   private readonly region = inject(RegionService);
-  private readonly session = inject(ActiveWorkoutSessionService);
   private readonly router = inject(Router);
+  /** Keep OS workout notifications alive for the shell lifetime. */
+  private readonly workoutOsNotif = inject(WorkoutOsNotificationService);
 
   ngOnInit(): void {
+    void this.workoutOsNotif;
     this.region.refresh();
     this.syncRegionToProfile();
     this.badge.refresh();
@@ -45,6 +49,20 @@ export class ShellComponent implements OnInit {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(() => this.badge.refresh());
+  }
+
+  /** Hard refresh into Home so the app reloads cleanly. */
+  hardRefreshHome(): void {
+    window.location.assign('/app');
+  }
+
+  openActiveWorkout(): void {
+    const active = this.session.active();
+    if (!active) {
+      return;
+    }
+    this.session.show();
+    void this.router.navigate(['/app/workouts', active.workoutId]);
   }
 
   /** Reattach floating timer if backend has an open session (e.g. new tab). */

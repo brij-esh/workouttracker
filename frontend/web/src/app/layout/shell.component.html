@@ -1,14 +1,27 @@
 <div class="shell">
   <header class="topbar">
-    <div class="brand">
-      <span class="mark">{{ brand.shortName }}</span>
+    <button type="button" class="brand" (click)="hardRefreshHome()" aria-label="Repwise home">
+      <span class="mark" aria-hidden="true">{{ brand.shortName }}</span>
       <div class="brand-text">
         <strong>{{ brand.name }}</strong>
         <small class="tagline">{{ brand.tagline }}</small>
       </div>
-    </div>
+    </button>
 
     <div class="top-actions">
+      @if (session.hasSession()) {
+        <button
+          type="button"
+          class="workout-chip"
+          (click)="openActiveWorkout()"
+          [attr.aria-label]="'Active workout ' + session.display()"
+          title="Open active workout"
+        >
+          <span class="workout-chip-dot" [class.paused]="session.isPaused()" aria-hidden="true"></span>
+          <span class="workout-chip-time">{{ session.display() }}</span>
+        </button>
+      }
+
       <a
         routerLink="/app/notifications"
         class="icon-chip"

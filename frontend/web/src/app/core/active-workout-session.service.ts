@@ -1,6 +1,7 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 import { RestTimerService } from './rest-timer.service';
 import { RESUME_WINDOW_MS } from './date-window';
+import { WorkoutOsNotificationService } from './workout-os-notification.service';
 
 export interface ActiveWorkoutSession {
   workoutId: string;
@@ -63,6 +64,7 @@ function removeStorage(key: string): void {
 @Injectable({ providedIn: 'root' })
 export class ActiveWorkoutSessionService {
   private readonly rest = inject(RestTimerService);
+  private readonly injector = inject(Injector);
   private readonly session = signal<ActiveWorkoutSession | null>(null);
   private readonly minimized = signal(false);
   private readonly nowMs = signal(Date.now());
@@ -144,6 +146,7 @@ export class ActiveWorkoutSessionService {
     this.nowMs.set(Date.now());
     this.ensureTick();
     this.persist();
+    void this.injector.get(WorkoutOsNotificationService).ensurePermission();
   }
 
   pause(): void {
@@ -297,6 +300,7 @@ export class ActiveWorkoutSessionService {
     this.nowMs.set(Date.now());
     if (running) {
       this.ensureTick();
+      void this.injector.get(WorkoutOsNotificationService).ensurePermission();
     } else {
       this.ensurePauseWatch();
     }

@@ -44,6 +44,20 @@
   gap: 0.75rem;
   align-items: center;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0.7rem;
+}
+
+.brand:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
 }
 
 .brand-text {
@@ -86,6 +100,58 @@
   align-items: center;
   gap: 0.55rem;
   flex-shrink: 0;
+}
+
+.workout-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  padding: 0 0.7rem;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.workout-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.workout-chip-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  animation: pulse-dot 1.4s ease infinite;
+}
+
+.workout-chip-dot.paused {
+  background: var(--muted);
+  box-shadow: none;
+  animation: none;
+}
+
+.workout-chip-time {
+  white-space: nowrap;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .icon-chip {
@@ -409,6 +475,18 @@ nav a.active .nav-icon {
 @media (max-width: 420px) {
   .brand-text strong {
     font-size: 0.92rem;
+  }
+
+  .workout-chip {
+    padding: 0 0.55rem;
+    font-size: 0.8rem;
+    min-height: 2.4rem;
+  }
+
+  .workout-chip-time {
+    max-width: 4.8rem;
+    overflow: hidden;
+    text-overflow: clip;
   }
 }
 
