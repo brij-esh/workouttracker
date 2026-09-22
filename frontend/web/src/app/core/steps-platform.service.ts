@@ -20,18 +20,20 @@ export interface StepsSample {
 
 const DEVICE_PERM_KEY = 'repwise.steps.devicePermission';
 const WEARABLE_PERM_KEY = 'repwise.steps.wearablePermission';
-const WEARABLE_CONNECTED_KEY = 'repwise.steps.wearableConnected';
+const DEVICE_ENABLED_KEY = 'repwise.steps.deviceEnabled';
+const WEARABLE_ENABLED_KEY = 'repwise.steps.wearableEnabled';
 
 /**
  * Reads / requests step access. Browsers cannot reach HealthKit or Health Connect;
- * a Capacitor (or similar) native bridge can. Until then we support consent + manual
- * entry and keep hooks for device/wearable sync.
+ * a Capacitor (or similar) native bridge can. Until then we support consent toggles
+ * and keep hooks for device/wearable sync.
  */
 @Injectable({ providedIn: 'root' })
 export class StepsPlatformService {
   readonly devicePermission = signal<StepsPermissionState>(this.readPerm(DEVICE_PERM_KEY));
   readonly wearablePermission = signal<StepsPermissionState>(this.readPerm(WEARABLE_PERM_KEY));
-  readonly wearableConnected = signal(localStorage.getItem(WEARABLE_CONNECTED_KEY) === '1');
+  readonly deviceSyncEnabled = signal(localStorage.getItem(DEVICE_ENABLED_KEY) === '1');
+  readonly wearableSyncEnabled = signal(localStorage.getItem(WEARABLE_ENABLED_KEY) === '1');
 
   capability(): StepsCapability {
     const nativeBridge = this.hasNativeHealthBridge();
@@ -48,8 +50,37 @@ export class StepsPlatformService {
       wearableSupported: false,
       nativeBridge: false,
       reason:
-        'Safari and Chrome cannot read HealthKit / Health Connect. Connect access is ready for a native wrapper; you can log steps manually meanwhile.'
+        'Safari and Chrome cannot read HealthKit / Health Connect. Enable sync here for when a native wrapper is available; add steps manually on Home.'
     };
+  }
+
+  async setDeviceSyncEnabled(enabled: boolean): Promise<StepsPermissionState | 'off'> {
+    if (!enabled) {
+      localStorage.removeItem(DEVICE_ENABLED_KEY);
+      this.deviceSyncEnabled.set(false);
+      return 'off';
+    }
+    const state = await this.requestDevicePermission();
+    if (state === 'granted' || state === 'unsupported') {
+      // Persist intent even when browser can't sync yet.
+      localStorage.setItem(DEVICE_ENABLED_KEY, '1');
+      this.deviceSyncEnabled.set(true);
+    }
+    return state;
+  }
+
+  async setWearableSyncEnabled(enabled: boolean): Promise<StepsPermissionState | 'off'> {
+    if (!enabled) {
+      localStorage.removeItem(WEARABLE_ENABLED_KEY);
+      this.wearableSyncEnabled.set(false);
+      return 'off';
+    }
+    const state = await this.requestWearablePermission();
+    if (state === 'granted' || state === 'unsupported') {
+      localStorage.setItem(WEARABLE_ENABLED_KEY, '1');
+      this.wearableSyncEnabled.set(true);
+    }
+    return state;
   }
 
   async requestDevicePermission(): Promise<StepsPermissionState> {
@@ -81,11 +112,8 @@ export class StepsPlatformService {
   async requestWearablePermission(): Promise<StepsPermissionState> {
     const cap = this.capability();
     if (!cap.wearableSupported && !cap.nativeBridge) {
-      // Still allow user to mark consent for when a watch sync bridge is available.
       this.setPerm(WEARABLE_PERM_KEY, 'granted');
       this.wearablePermission.set('granted');
-      localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
-      this.wearableConnected.set(true);
       return 'granted';
     }
     try {
@@ -95,10 +123,6 @@ export class StepsPlatformService {
         const state: StepsPermissionState = ok ? 'granted' : 'denied';
         this.setPerm(WEARABLE_PERM_KEY, state);
         this.wearablePermission.set(state);
-        if (ok) {
-          localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
-          this.wearableConnected.set(true);
-        }
         return state;
       }
     } catch {
@@ -108,14 +132,7 @@ export class StepsPlatformService {
     }
     this.setPerm(WEARABLE_PERM_KEY, 'granted');
     this.wearablePermission.set('granted');
-    localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
-    this.wearableConnected.set(true);
     return 'granted';
-  }
-
-  disconnectWearable(): void {
-    localStorage.removeItem(WEARABLE_CONNECTED_KEY);
-    this.wearableConnected.set(false);
   }
 
   async readTodaySteps(preferred: 'DEVICE' | 'WEARABLE' = 'DEVICE'): Promise<StepsSample | null> {

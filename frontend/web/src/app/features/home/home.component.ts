@@ -9,14 +9,12 @@ import { AchievementsService, AchievementsSnapshot } from '../../core/achievemen
 import { MotivationalQuote, MotivationalQuoteService } from '../../core/motivational-quote.service';
 import { ToastService } from '../../core/toast.service';
 import { NotificationBadgeService } from '../../core/notification-badge.service';
-import { StepsPlatformService } from '../../core/steps-platform.service';
 import {
   Meal,
   NotificationItem,
   PersonalRecord,
   StrengthExerciseSummary,
   StepLog,
-  StepSource,
   UserProfile,
   WaterLog,
   WeightLog,
@@ -37,7 +35,6 @@ export class HomeComponent implements OnInit {
   private readonly quotes = inject(MotivationalQuoteService);
   private readonly toast = inject(ToastService);
   private readonly badge = inject(NotificationBadgeService);
-  readonly stepsPlatform = inject(StepsPlatformService);
   readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
@@ -58,12 +55,12 @@ export class HomeComponent implements OnInit {
   readonly stepHistory = signal<StepLog[]>([]);
   readonly stepsBusy = signal(false);
   readonly manualSteps = signal('');
+  readonly addingSteps = signal(false);
 
   readonly unreadBadge = signal(0);
 
   readonly today = new Date();
   readonly todayKey = this.toDateKey(this.today);
-  readonly stepsCapability = this.stepsPlatform.capability();
 
   readonly displayName = computed(() => {
     const fromProfile = this.profile()?.displayName?.trim();
@@ -122,6 +119,16 @@ export class HomeComponent implements OnInit {
   readonly stepGoal = 8000;
   readonly stepProgressPct = computed(() =>
     Math.min(100, Math.round((this.todaySteps() / this.stepGoal) * 100))
+  );
+
+  readonly todayWorkoutCalories = computed(() =>
+    this.workouts()
+      .filter((w) => (w.workoutDate?.slice(0, 10) ?? '') === this.todayKey)
+      .reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0)
+  );
+
+  readonly todayTotalBurn = computed(
+    () => this.todayWorkoutCalories() + this.todayStepCalories()
   );
 
   readonly stepHistoryRows = computed(() => {
@@ -209,57 +216,9 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  async connectPhone(): Promise<void> {
-    this.stepsBusy.set(true);
-    try {
-      const state = await this.stepsPlatform.requestDevicePermission();
-      if (state === 'unsupported') {
-        this.toast.error(
-          'This browser cannot read phone Health data. Log steps manually, or use a native app build with Health access.'
-        );
-        return;
-      }
-      if (state !== 'granted') {
-        this.toast.error('Phone step access was denied');
-        return;
-      }
-      await this.syncFrom('DEVICE');
-    } finally {
-      this.stepsBusy.set(false);
-    }
-  }
-
-  async connectWearable(): Promise<void> {
-    this.stepsBusy.set(true);
-    try {
-      const state = await this.stepsPlatform.requestWearablePermission();
-      if (state === 'denied') {
-        this.toast.error('Wearable access was denied');
-        return;
-      }
-      this.toast.success('Wearable permission saved — sync when your watch bridge is available');
-      await this.syncFrom('WEARABLE');
-    } finally {
-      this.stepsBusy.set(false);
-    }
-  }
-
-  async syncFrom(source: 'DEVICE' | 'WEARABLE'): Promise<void> {
-    this.stepsBusy.set(true);
-    try {
-      const sample = await this.stepsPlatform.readTodaySteps(source);
-      if (!sample) {
-        this.toast.error(
-          source === 'WEARABLE'
-            ? 'No wearable steps yet — connect a native health bridge or enter steps manually'
-            : 'No phone steps available here — enter today’s count manually'
-        );
-        return;
-      }
-      await this.saveSteps(sample.steps, sample.source, sample.sourceLabel);
-    } finally {
-      this.stepsBusy.set(false);
-    }
+  cancelAddSteps(): void {
+    this.addingSteps.set(false);
+    this.manualSteps.set('');
   }
 
   onManualStepsChange(value: string | number | null): void {
@@ -271,16 +230,17 @@ export class HomeComponent implements OnInit {
   }
 
   addManualSteps(): void {
-    const steps = Number(String(this.manualSteps()).trim());
-    if (!Number.isFinite(steps) || steps < 0 || String(this.manualSteps()).trim() === '') {
-      this.toast.error('Enter a valid step count');
+    const added = Number(String(this.manualSteps()).trim());
+    if (!Number.isFinite(added) || added <= 0 || String(this.manualSteps()).trim() === '') {
+      this.toast.error('Enter steps to add');
       return;
     }
+    const total = this.todaySteps() + Math.round(added);
     this.stepsBusy.set(true);
     this.api
       .upsertSteps({
         recordedOn: this.todayKey,
-        steps: Math.round(steps),
+        steps: total,
         source: 'MANUAL',
         sourceLabel: 'Manual',
         weightKg: this.weightForSteps()
@@ -288,7 +248,9 @@ export class HomeComponent implements OnInit {
       .subscribe({
         next: (log) => {
           this.applyStepLog(log);
-          this.toast.success(`Added ${log.steps.toLocaleString()} steps · ${log.caloriesBurned} kcal`);
+          this.manualSteps.set('');
+          this.addingSteps.set(false);
+          this.toast.success(`Added ${Math.round(added).toLocaleString()} steps · ${log.caloriesBurned} kcal today`);
           this.stepsBusy.set(false);
         },
         error: (err: { error?: { detail?: string; message?: string } }) => {
@@ -316,31 +278,6 @@ export class HomeComponent implements OnInit {
     this.stepHistory.update((rows) => {
       const rest = rows.filter((r) => r.recordedOn !== log.recordedOn);
       return [log, ...rest].sort((a, b) => b.recordedOn.localeCompare(a.recordedOn));
-    });
-    this.manualSteps.set(String(log.steps));
-  }
-
-  private async saveSteps(steps: number, source: StepSource, sourceLabel: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.api
-        .upsertSteps({
-          recordedOn: this.todayKey,
-          steps,
-          source,
-          sourceLabel,
-          weightKg: this.weightForSteps()
-        })
-        .subscribe({
-          next: (log) => {
-            this.applyStepLog(log);
-            this.toast.success(`Steps updated · ${log.caloriesBurned} kcal`);
-            resolve();
-          },
-          error: () => {
-            this.toast.error('Could not save steps');
-            reject(new Error('save failed'));
-          }
-        });
     });
   }
 
@@ -417,9 +354,6 @@ export class HomeComponent implements OnInit {
     this.strength.set(data.strength ?? []);
     this.stepsToday.set(data.stepsToday);
     this.stepHistory.set(data.stepHistory ?? []);
-    if (data.stepsToday) {
-      this.manualSteps.set(String(data.stepsToday.steps));
-    }
   }
 
   private toDateKey(date: Date): string {

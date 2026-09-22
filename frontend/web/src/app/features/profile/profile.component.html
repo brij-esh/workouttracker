@@ -205,6 +205,56 @@
     <span class="chevron" aria-hidden="true"></span>
   </a>
 
+  <section class="card activity-sync-card">
+    <div class="activity-sync-copy">
+      <h2>Activity sync</h2>
+      <p class="muted">
+        Enable phone or wearable step sync when a native health bridge is available. Manual adds stay on Home.
+      </p>
+      @if (!stepsPlatform.capability().nativeBridge) {
+        <p class="sync-note muted">
+          This browser can’t read HealthKit / Health Connect yet — toggles save your preference for a native app build.
+        </p>
+      }
+    </div>
+    <div class="sync-toggles">
+      <div class="sync-row">
+        <div>
+          <strong>Phone steps</strong>
+          <span class="muted">{{ deviceSyncLabel() }}</span>
+        </div>
+        <button
+          type="button"
+          class="sync-switch"
+          role="switch"
+          [attr.aria-checked]="stepsPlatform.deviceSyncEnabled()"
+          [disabled]="syncBusy() === 'device'"
+          (click)="toggleDeviceSync()"
+        >
+          <span class="sync-track" aria-hidden="true"><span class="sync-thumb"></span></span>
+          <span class="sr-only">{{ stepsPlatform.deviceSyncEnabled() ? 'Disable' : 'Enable' }} phone sync</span>
+        </button>
+      </div>
+      <div class="sync-row">
+        <div>
+          <strong>Wearable</strong>
+          <span class="muted">{{ wearableSyncLabel() }}</span>
+        </div>
+        <button
+          type="button"
+          class="sync-switch"
+          role="switch"
+          [attr.aria-checked]="stepsPlatform.wearableSyncEnabled()"
+          [disabled]="syncBusy() === 'wearable'"
+          (click)="toggleWearableSync()"
+        >
+          <span class="sync-track" aria-hidden="true"><span class="sync-thumb"></span></span>
+          <span class="sr-only">{{ stepsPlatform.wearableSyncEnabled() ? 'Disable' : 'Enable' }} wearable sync</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
   <section class="card region-card">
     <div class="region-copy">
       <h2>Region &amp; timezone</h2>

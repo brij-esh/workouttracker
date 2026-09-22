@@ -9,6 +9,7 @@ import { ThemeService } from '../../core/theme.service';
 import { ToastService } from '../../core/toast.service';
 import { RegionService } from '../../core/region.service';
 import { NutritionTargetsSyncService } from '../../core/nutrition-targets-sync.service';
+import { StepsPlatformService } from '../../core/steps-platform.service';
 import { UserProfile } from '../../core/models';
 import { DateInputComponent } from '../../shared/date-input.component';
 import { AppSelectOption, SelectComponent } from '../../shared/select.component';
@@ -34,6 +35,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly theme = inject(ThemeService);
   readonly region = inject(RegionService);
+  readonly stepsPlatform = inject(StepsPlatformService);
   private readonly toast = inject(ToastService);
   private readonly nutritionSync = inject(NutritionTargetsSyncService);
 
@@ -42,6 +44,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly saved = signal(false);
   readonly detecting = signal<'timezone' | 'location' | null>(null);
+  readonly syncBusy = signal<'device' | 'wearable' | null>(null);
 
   readonly cropSrc = signal<string | null>(null);
   readonly photoBusy = signal(false);
@@ -325,6 +328,60 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   async detectRegionFromLocation(): Promise<void> {
     await this.applyDetectedRegion('location', () => this.region.detectFromLocation());
+  }
+
+  deviceSyncLabel(): string {
+    if (this.stepsPlatform.deviceSyncEnabled()) {
+      return this.stepsPlatform.devicePermission() === 'unsupported'
+        ? 'Enabled · awaits native bridge'
+        : 'Enabled';
+    }
+    return 'Off';
+  }
+
+  wearableSyncLabel(): string {
+    if (this.stepsPlatform.wearableSyncEnabled()) {
+      return this.stepsPlatform.wearablePermission() === 'unsupported'
+        ? 'Enabled · awaits native bridge'
+        : 'Enabled';
+    }
+    return 'Off';
+  }
+
+  async toggleDeviceSync(): Promise<void> {
+    if (this.syncBusy()) {
+      return;
+    }
+    this.syncBusy.set('device');
+    try {
+      const next = !this.stepsPlatform.deviceSyncEnabled();
+      const result = await this.stepsPlatform.setDeviceSyncEnabled(next);
+      if (result === 'denied') {
+        this.toast.error('Phone step access was denied');
+        return;
+      }
+      this.toast.success(next ? 'Phone step sync enabled' : 'Phone step sync disabled');
+    } finally {
+      this.syncBusy.set(null);
+    }
+  }
+
+  async toggleWearableSync(): Promise<void> {
+    if (this.syncBusy()) {
+      return;
+    }
+    this.syncBusy.set('wearable');
+    try {
+      const next = !this.stepsPlatform.wearableSyncEnabled();
+      const result = await this.stepsPlatform.setWearableSyncEnabled(next);
+      if (result === 'denied') {
+        this.toast.error('Wearable access was denied');
+        return;
+      }
+      this.toast.success(next ? 'Wearable sync enabled' : 'Wearable sync disabled');
+    } finally {
+      this.syncBusy.set(null);
+    }
   }
 
   private async applyDetectedRegion(

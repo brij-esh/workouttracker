@@ -80,9 +80,11 @@
 }
 
 .steps-highlight {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 1rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem 1.25rem;
   padding: 1.1rem 1.15rem 1.2rem;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   border-radius: 1.2rem;
@@ -90,6 +92,11 @@
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
     var(--panel);
   animation: rise 0.55s ease 0.06s both;
+}
+
+.steps-main {
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .steps-kicker {
@@ -136,6 +143,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--text) 8%, transparent);
   overflow: hidden;
+  max-width: 18rem;
 }
 
 .steps-bar-fill {
@@ -145,44 +153,64 @@
   transition: width 0.35s ease;
 }
 
-.steps-meta {
-  margin: 0.55rem 0 0;
-  font-size: 0.82rem;
+.steps-add-wrap {
+  flex: 0 1 auto;
 }
 
-.steps-controls {
-  display: grid;
-  gap: 0.65rem;
-  align-content: start;
+.steps-add-btn {
+  min-height: 2.2rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--line);
+  font-weight: 700;
 }
 
 .steps-manual {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .steps-manual input {
-  min-height: 2.55rem;
-  width: 100%;
+  width: 6.5rem;
+  min-height: 2.2rem;
 }
 
-.steps-connect {
+.daily-burn {
+  animation: rise 0.55s ease 0.08s both;
+}
+
+.burn-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
-.steps-connect .secondary {
-  min-height: 2.45rem;
-  font-size: 0.85rem;
-  padding-inline: 0.55rem;
+.burn-grid > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
 }
 
-.steps-note {
-  margin: 0;
+.burn-grid strong {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.burn-grid span {
+  color: var(--muted);
   font-size: 0.78rem;
-  line-height: 1.35;
+  font-weight: 600;
+}
+
+.burn-total {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line)) !important;
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel)) !important;
 }
 
 .steps-history {
@@ -267,11 +295,7 @@
 }
 
 @media (max-width: 700px) {
-  .steps-highlight {
-    grid-template-columns: 1fr;
-  }
-
-  .steps-connect {
+  .burn-grid {
     grid-template-columns: 1fr;
   }
 }

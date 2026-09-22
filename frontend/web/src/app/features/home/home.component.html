@@ -42,7 +42,7 @@
   } @else {
     <section class="steps-highlight" aria-label="Today’s steps">
       <div class="steps-main">
-        <p class="steps-kicker">Today’s movement</p>
+        <p class="steps-kicker">Today’s steps</p>
         <div class="steps-figures">
           <div>
             <strong class="steps-value">{{ todaySteps() | number }}</strong>
@@ -50,25 +50,25 @@
           </div>
           <div>
             <strong class="steps-value kcal">{{ todayStepCalories() | number }}</strong>
-            <span class="steps-label">kcal from steps</span>
+            <span class="steps-label">kcal</span>
           </div>
         </div>
         <div class="steps-bar" aria-hidden="true">
           <div class="steps-bar-fill" [style.width.%]="stepProgressPct()"></div>
         </div>
-        <p class="steps-meta muted">
-          Goal {{ stepGoal | number }} ·
-          @if (stepsToday(); as s) {
-            via {{ sourceLabel(s) }}
-          } @else {
-            not logged yet
-          }
-        </p>
       </div>
-      <div class="steps-controls">
-        <div class="steps-manual">
-          <label>
-            <span class="sr-only">Steps today</span>
+      <div class="steps-add-wrap">
+        @if (!addingSteps()) {
+          <button
+            type="button"
+            class="ghost tiny steps-add-btn"
+            (click)="addingSteps.set(true)"
+            aria-label="Add steps"
+          >
+            + Add
+          </button>
+        } @else {
+          <div class="steps-manual">
             <input
               type="number"
               inputmode="numeric"
@@ -77,26 +77,17 @@
               [ngModel]="manualSteps()"
               (ngModelChange)="onManualStepsChange($event)"
               (keydown.enter)="addManualSteps(); $event.preventDefault()"
-              placeholder="Enter steps"
+              placeholder="Steps"
               [disabled]="stepsBusy()"
+              autofocus
             />
-          </label>
-          <button type="button" class="primary" [disabled]="stepsBusy()" (click)="addManualSteps()">
-            {{ stepsBusy() ? 'Adding…' : 'Add' }}
-          </button>
-        </div>
-        <div class="steps-connect">
-          <button type="button" class="secondary" [disabled]="stepsBusy()" (click)="connectPhone()">
-            {{ stepsPlatform.devicePermission() === 'granted' ? 'Sync phone' : 'Allow phone steps' }}
-          </button>
-          <button type="button" class="secondary" [disabled]="stepsBusy()" (click)="connectWearable()">
-            {{ stepsPlatform.wearableConnected() ? 'Sync wearable' : 'Connect wearable' }}
-          </button>
-        </div>
-        @if (!stepsCapability.nativeBridge) {
-          <p class="steps-note muted">
-            Phone HealthKit / Health Connect needs a native app wrapper. Permissions are stored; use Add for now.
-          </p>
+            <button type="button" class="primary tiny" [disabled]="stepsBusy()" (click)="addManualSteps()">
+              {{ stepsBusy() ? '…' : 'Add' }}
+            </button>
+            <button type="button" class="ghost tiny" [disabled]="stepsBusy()" (click)="cancelAddSteps()">
+              Cancel
+            </button>
+          </div>
         }
       </div>
     </section>
@@ -117,6 +108,27 @@
       <div class="stat">
         <span class="stat-value">{{ streakDays() }}</span>
         <span class="stat-label">Day streak</span>
+      </div>
+    </section>
+
+    <section class="daily-burn panel" aria-label="Today’s calories burned">
+      <div class="panel-head">
+        <h2>Today’s burn</h2>
+        <span class="muted">Workouts + steps</span>
+      </div>
+      <div class="burn-grid">
+        <div>
+          <strong>{{ todayWorkoutCalories() | number }}</strong>
+          <span>Workout kcal</span>
+        </div>
+        <div>
+          <strong>{{ todayStepCalories() | number }}</strong>
+          <span>Steps kcal</span>
+        </div>
+        <div class="burn-total">
+          <strong>{{ todayTotalBurn() | number }}</strong>
+          <span>Total burned</span>
+        </div>
       </div>
     </section>
 
