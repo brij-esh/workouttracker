@@ -56,7 +56,7 @@ postman/           API collections
 
 ## Quick start
 
-### 1. Backend stack
+### 1. Backend stack (local)
 
 ```powershell
 cd infrastructure
@@ -68,6 +68,8 @@ This builds backend JARs on the host, builds images, and starts Postgres, Redis,
 
 Gateway: `http://localhost:8080`
 
+First boot can take several minutes while Java services warm up.
+
 ### 2. Firebase for the gateway
 
 Place your service account JSON at:
@@ -78,7 +80,7 @@ backend/api-gateway/src/main/resources/firebase-service-account.json
 
 Do not commit this file — it is gitignored. See `docs/WORKOUT_TRACKER_ARCHITECTURE_README.md` for setup details.
 
-### 3. Frontend
+### 3. Frontend (local)
 
 ```powershell
 cd frontend\web
@@ -89,6 +91,35 @@ npm start
 App: `http://localhost:4200` (proxies `/api` → gateway `:8080`).
 
 Configure Firebase web credentials in `frontend/web/src/environments/environment.ts`.
+
+## Vercel frontend + local backend
+
+The Angular app can run on Vercel while the API stays on your machine. A Cloudflare quick tunnel publishes `localhost:8080` to a public HTTPS URL; the frontend calls that URL.
+
+1. Start the backend (`infrastructure\up.ps1`) and wait until `http://localhost:8080/actuator/health` returns UP.
+2. In a separate terminal, keep this running:
+
+```powershell
+.\infrastructure\tunnel-api.ps1
+```
+
+Copy the `https://*.trycloudflare.com` URL it prints.
+
+3. Deploy the frontend (builds with that tunnel as `API_BASE_URL`):
+
+```powershell
+.\infrastructure\deploy-frontend-vercel.ps1 -ApiBaseUrl https://YOUR-SUBDOMAIN.trycloudflare.com
+```
+
+Or set `API_BASE_URL` in the Vercel project and run `vercel --prod` from `frontend/web`.
+
+4. In Firebase Console → Authentication → Settings → Authorized domains, add your Vercel domain (for example `web-three-bay-29.vercel.app`).
+
+Notes:
+
+- Keep Docker + the tunnel process running while you use the Vercel site.
+- Quick tunnels get a new hostname each restart — update `API_BASE_URL` and redeploy (or rerun the deploy script).
+- Gateway CORS already allows `https://*.vercel.app`.
 
 ## API testing
 

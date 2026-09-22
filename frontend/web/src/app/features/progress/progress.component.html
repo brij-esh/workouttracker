@@ -50,7 +50,7 @@
 
   @switch (mainTab()) {
   @case ('strength') {
-    <div class="strength-workspace">
+    <div class="strength-workspace" [class.has-selection]="!!selectedExerciseKey()">
       <article class="panel strength-list">
         <div class="panel-head">
           <h2>Exercises</h2>

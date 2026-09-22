@@ -32,6 +32,23 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   );
 };
 
-function isAppApiUrl(url: string): boolean {
-  return /localhost|127\.0\.0\.1|\/api\b|workout-tracker|gateway/i.test(url);
+export function isAppApiUrl(url: string): boolean {
+  if (!/^https?:\/\//i.test(url)) {
+    return /\/api\b/i.test(url);
+  }
+  try {
+    const { hostname, pathname } = new URL(url);
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.endsWith('.trycloudflare.com') ||
+      hostname.endsWith('.ngrok-free.app') ||
+      hostname.endsWith('.ngrok.io') ||
+      hostname.endsWith('.loca.lt') ||
+      /workout-tracker|gateway/i.test(hostname) ||
+      pathname.includes('/api')
+    );
+  } catch {
+    return false;
+  }
 }

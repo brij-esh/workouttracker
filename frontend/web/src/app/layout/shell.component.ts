@@ -11,6 +11,7 @@ import { APP_BRAND } from '../core/app-brand';
 import { ToastHostComponent } from '../core/toast-host.component';
 import { ActiveWorkoutFabComponent } from '../core/active-workout-fab.component';
 import { ConfirmDialogHostComponent } from '../core/confirm-dialog-host.component';
+import { OfflineOutboxService } from '../core/offline-outbox.service';
 
 @Component({
   selector: 'app-shell',
@@ -30,6 +31,7 @@ export class ShellComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly brand = APP_BRAND;
   readonly badge = inject(NotificationBadgeService);
+  readonly outbox = inject(OfflineOutboxService);
   private readonly api = inject(ApiService);
   private readonly region = inject(RegionService);
   private readonly session = inject(ActiveWorkoutSessionService);

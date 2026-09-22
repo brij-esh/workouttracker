@@ -233,8 +233,28 @@ nav a.active .nav-icon {
   padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 3vw, 1.75rem);
 }
 
+.sync-banner {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sync-banner.offline {
+  border-color: color-mix(in srgb, #c45c5c 40%, var(--line));
+  background: color-mix(in srgb, #c45c5c 12%, var(--panel));
+}
+
+.sync-banner.syncing {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
 /* Keep page roots from stretching the shell sideways */
-.content > :first-child {
+.content > :not(.sync-banner) {
   width: 100%;
   max-width: 100%;
   min-width: 0;

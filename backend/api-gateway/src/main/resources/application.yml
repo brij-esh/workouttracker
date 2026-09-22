@@ -29,9 +29,12 @@ spring:
           globalcors:
             cors-configurations:
               '[/**]':
-                allowed-origins:
-                  - http://localhost:4200
-                  - http://localhost:8100
+                # Patterns so Vercel preview/production and local Angular can call a tunneled gateway.
+                allowed-origin-patterns:
+                  - "http://localhost:*"
+                  - "http://127.0.0.1:*"
+                  - "https://*.vercel.app"
+                  - "https://*.vercel.sh"
                 allowed-methods:
                   - GET
                   - POST
@@ -42,6 +45,7 @@ spring:
                 allowed-headers:
                   - "*"
                 allow-credentials: true
+                max-age: 3600
 
 workout:
   security:

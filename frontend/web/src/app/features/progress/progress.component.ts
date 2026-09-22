@@ -176,7 +176,7 @@ export class ProgressComponent implements OnInit {
         id: `avg-${row.id}`,
         x,
         y,
-        label: this.shortDate(row.recordedOn),
+        label: this.chartAxisLabel(this.shortDate(row.recordedOn), i, n),
         weightKg: Number(row.weightKg),
         recordedOn: row.recordedOn
       };
@@ -317,7 +317,7 @@ export class ProgressComponent implements OnInit {
         id: `${row.workoutId}-${row.date}`,
         x,
         y,
-        label: this.shortDate(row.date),
+        label: this.chartAxisLabel(this.shortDate(row.date), i, n),
         oneRmKg: oneRm,
         date: row.date,
         maxWeightKg: row.maxWeightKg
@@ -748,8 +748,15 @@ export class ProgressComponent implements OnInit {
 
   private reloadBody(): void {
     this.api.listWeightLogs().subscribe({
-      next: (rows) => this.weights.set(rows),
-      error: () => this.error.set('Failed to load weight logs')
+      next: (rows) => {
+        this.weights.set(rows);
+        this.error.set(null);
+      },
+      error: () => {
+        if (!this.weights().length) {
+          this.error.set('Failed to load weight logs');
+        }
+      }
     });
     this.api.getBodyWeightProgress().subscribe({
       next: (overview) => {
@@ -758,11 +765,19 @@ export class ProgressComponent implements OnInit {
           this.goalForm.patchValue({ goalWeightKg: Number(overview.goalWeightKg) });
         }
       },
-      error: () => this.error.set('Failed to load body weight progress')
+      error: () => {
+        if (!this.bodyOverview()) {
+          this.error.set('Failed to load body weight progress');
+        }
+      }
     });
     this.api.listPersonalRecords().subscribe({
       next: (rows) => this.records.set(rows),
-      error: () => this.error.set('Failed to load personal records')
+      error: () => {
+        if (!this.records().length) {
+          this.error.set('Failed to load personal records');
+        }
+      }
     });
   }
 
@@ -775,12 +790,20 @@ export class ProgressComponent implements OnInit {
       : this.api.createWeightLog(body);
 
     req.subscribe({
-      next: () => {
+      next: (row) => {
         this.saving.set(false);
         this.cancelEditWeight();
+        if (row?.id) {
+          this.weights.update((list) => {
+            const without = list.filter((w) => w.id !== row.id && w.id !== id);
+            return [row, ...without].sort((a, b) => b.recordedOn.localeCompare(a.recordedOn));
+          });
+        }
         this.reloadBody();
-        this.toast.success(id ? 'Weight updated' : 'Weight saved');
-        this.nutritionSync.syncAfterWeightLogChange().subscribe();
+        if (!(row as WeightLog & { pendingSync?: boolean })?.pendingSync) {
+          this.toast.success(id ? 'Weight updated' : 'Weight saved');
+        }
+        this.nutritionSync.syncAfterWeightLogChange().subscribe({ error: () => undefined });
       },
       error: (err) => {
         this.saving.set(false);
@@ -800,11 +823,19 @@ export class ProgressComponent implements OnInit {
       : this.api.createPersonalRecord(body);
 
     req.subscribe({
-      next: () => {
+      next: (row) => {
         this.saving.set(false);
         this.cancelEditPr();
+        if (row?.id) {
+          this.records.update((list) => {
+            const without = list.filter((r) => r.id !== row.id && r.id !== id);
+            return [row, ...without].sort((a, b) => b.recordedOn.localeCompare(a.recordedOn));
+          });
+        }
         this.reloadBody();
-        this.toast.success(id ? 'Personal record updated' : 'Personal record saved');
+        if (!(row as PersonalRecord & { pendingSync?: boolean })?.pendingSync) {
+          this.toast.success(id ? 'Personal record updated' : 'Personal record saved');
+        }
       },
       error: () => {
         this.saving.set(false);
@@ -872,6 +903,18 @@ export class ProgressComponent implements OnInit {
       return iso.slice(5);
     }
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  /** Hide intermediate x-axis labels when many points would collide. */
+  private chartAxisLabel(label: string, index: number, total: number): string {
+    if (total <= 6) {
+      return label;
+    }
+    const step = total <= 12 ? 2 : total <= 20 ? 3 : 4;
+    if (index === 0 || index === total - 1 || index % step === 0) {
+      return label;
+    }
+    return '';
   }
 
   private trimNum(value: number, maxFrac = 1): string {

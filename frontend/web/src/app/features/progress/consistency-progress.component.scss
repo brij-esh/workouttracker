@@ -156,18 +156,19 @@
   gap: 0.35rem;
   overflow-x: auto;
   padding-bottom: 0.2rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .heat-row {
   display: grid;
-  grid-template-columns: 2.5rem 1fr;
-  gap: 0.45rem;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.35rem;
   align-items: center;
-  min-width: 42rem;
+  min-width: min(100%, 36rem);
 }
 
 .heat-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--muted);
 }
@@ -175,26 +176,26 @@
 .heat-cells {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(3.1rem, 1fr);
-  gap: 0.3rem;
+  grid-auto-columns: minmax(1.85rem, 1fr);
+  gap: 0.22rem;
 }
 
 .heat-cell {
   aspect-ratio: 1;
-  border-radius: 0.35rem;
+  border-radius: 0.3rem;
   background: color-mix(in srgb, var(--line) 75%, var(--bg));
   border: 1px solid transparent;
   display: block;
   position: relative;
-  min-height: 3.1rem;
+  min-height: 1.85rem;
   padding: 0;
 }
 
 .heat-date {
   position: absolute;
-  top: 0.2rem;
-  left: 0.25rem;
-  font-size: 0.58rem;
+  top: 0.12rem;
+  left: 0.14rem;
+  font-size: 0.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -286,5 +287,44 @@
   .month-nav {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .heat-row {
+    grid-template-columns: 1.6rem 1fr;
+    min-width: 0;
+  }
+
+  .heat-cells {
+    grid-auto-columns: minmax(1.35rem, 1fr);
+    gap: 0.16rem;
+  }
+
+  .heat-cell {
+    min-height: 1.35rem;
+    border-radius: 0.22rem;
+  }
+
+  .heat-date {
+    font-size: 0.42rem;
+    top: 0.08rem;
+    left: 0.08rem;
+  }
+
+  .heatmap-head {
+    flex-wrap: wrap;
+  }
+
+  .heat-legend {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 400px) {
+  .metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .heat-date {
+    display: none;
   }
 }

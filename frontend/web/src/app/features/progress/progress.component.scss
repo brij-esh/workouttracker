@@ -49,6 +49,10 @@
   border-radius: 999px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .view-toggle .ghost {
@@ -58,6 +62,8 @@
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
   color: var(--muted);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .view-toggle .ghost.active {
@@ -201,12 +207,28 @@
   .metrics-grid {
     grid-template-columns: 1fr;
   }
+
+  .stats.strength-stats,
+  .stats.body-avg-stats {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (min-width: 960px) {
   .strength-workspace {
     grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
     align-items: start;
+  }
+}
+
+/* Phone: list or detail, not a squeezed split */
+@media (max-width: 759px) {
+  .strength-workspace.has-selection .strength-list {
+    display: none;
+  }
+
+  .strength-workspace:not(.has-selection) .strength-detail {
+    display: none;
   }
 }
 
@@ -343,12 +365,40 @@
 @media (max-width: 700px) {
   .bw-hero,
   .bw-secondary {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bw-hero .bw-metric.emphasis {
+    grid-column: 1 / -1;
   }
 
   .smart-note {
     text-align: left;
     max-width: none;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+  }
+
+  .goal-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .goal-row .primary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .bw-hero,
+  .bw-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .bw-hero .bw-metric.emphasis {
+    grid-column: auto;
   }
 }
 
@@ -734,6 +784,32 @@ input {
 
   .data-list li {
     flex-direction: column;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .chart-wrap {
+    margin-inline: -0.25rem;
+  }
+
+  .line-chart {
+    min-width: 0;
+  }
+
+  .x-label {
+    font-size: 8px;
+  }
+
+  .bar-value {
+    justify-self: start;
   }
 }
 

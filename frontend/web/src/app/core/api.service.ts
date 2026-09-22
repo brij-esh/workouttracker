@@ -365,21 +365,46 @@ export class ApiService {
   }
 
   createWeightLog(body: WeightLogRequest): Observable<WeightLog> {
-    return this.http
-      .post<WeightLog>(`${this.base}/progress/weight`, body)
-      .pipe(tap(() => this.cache.invalidate('progress')));
+    return this.http.post<WeightLog>(`${this.base}/progress/weight`, body).pipe(
+      tap((row) => {
+        const prev = this.cache.peek<WeightLog[]>('progress:weight') ?? [];
+        this.cache.set(
+          'progress:weight',
+          [row, ...prev.filter((w) => w.id !== row.id)],
+          ['progress']
+        );
+        this.cache.invalidateKeys('progress:weight-overview');
+      })
+    );
   }
 
   updateWeightLog(id: string, body: WeightLogRequest): Observable<WeightLog> {
-    return this.http
-      .put<WeightLog>(`${this.base}/progress/weight/${id}`, body)
-      .pipe(tap(() => this.cache.invalidate('progress')));
+    return this.http.put<WeightLog>(`${this.base}/progress/weight/${id}`, body).pipe(
+      tap((row) => {
+        const prev = this.cache.peek<WeightLog[]>('progress:weight') ?? [];
+        this.cache.set(
+          'progress:weight',
+          prev.map((w) => (w.id === id ? row : w)),
+          ['progress']
+        );
+        this.cache.invalidateKeys('progress:weight-overview');
+      })
+    );
   }
 
   deleteWeightLog(id: string): Observable<void> {
-    return this.http
-      .delete<void>(`${this.base}/progress/weight/${id}`)
-      .pipe(tap(() => this.cache.invalidate('progress', 'archived')));
+    return this.http.delete<void>(`${this.base}/progress/weight/${id}`).pipe(
+      tap(() => {
+        const prev = this.cache.peek<WeightLog[]>('progress:weight') ?? [];
+        this.cache.invalidate('archived');
+        this.cache.invalidateKeys('progress:weight-overview');
+        this.cache.set(
+          'progress:weight',
+          prev.filter((w) => w.id !== id),
+          ['progress']
+        );
+      })
+    );
   }
 
   archiveWeightLog(id: string): Observable<WeightLog> {
@@ -401,21 +426,43 @@ export class ApiService {
   }
 
   createPersonalRecord(body: PersonalRecordRequest): Observable<PersonalRecord> {
-    return this.http
-      .post<PersonalRecord>(`${this.base}/progress/personal-records`, body)
-      .pipe(tap(() => this.cache.invalidate('progress')));
+    return this.http.post<PersonalRecord>(`${this.base}/progress/personal-records`, body).pipe(
+      tap((row) => {
+        const prev = this.cache.peek<PersonalRecord[]>('progress:prs') ?? [];
+        this.cache.set(
+          'progress:prs',
+          [row, ...prev.filter((r) => r.id !== row.id)],
+          ['progress']
+        );
+      })
+    );
   }
 
   updatePersonalRecord(id: string, body: PersonalRecordRequest): Observable<PersonalRecord> {
-    return this.http
-      .put<PersonalRecord>(`${this.base}/progress/personal-records/${id}`, body)
-      .pipe(tap(() => this.cache.invalidate('progress')));
+    return this.http.put<PersonalRecord>(`${this.base}/progress/personal-records/${id}`, body).pipe(
+      tap((row) => {
+        const prev = this.cache.peek<PersonalRecord[]>('progress:prs') ?? [];
+        this.cache.set(
+          'progress:prs',
+          prev.map((r) => (r.id === id ? row : r)),
+          ['progress']
+        );
+      })
+    );
   }
 
   deletePersonalRecord(id: string): Observable<void> {
-    return this.http
-      .delete<void>(`${this.base}/progress/personal-records/${id}`)
-      .pipe(tap(() => this.cache.invalidate('progress', 'archived')));
+    return this.http.delete<void>(`${this.base}/progress/personal-records/${id}`).pipe(
+      tap(() => {
+        const prev = this.cache.peek<PersonalRecord[]>('progress:prs') ?? [];
+        this.cache.invalidate('archived');
+        this.cache.set(
+          'progress:prs',
+          prev.filter((r) => r.id !== id),
+          ['progress']
+        );
+      })
+    );
   }
 
   archivePersonalRecord(id: string): Observable<PersonalRecord> {

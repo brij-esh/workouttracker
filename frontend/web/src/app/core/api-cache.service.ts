@@ -1,5 +1,5 @@
 import { Injectable, inject, effect } from '@angular/core';
-import { Observable, finalize, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, finalize, of, shareReplay, tap, throwError } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 
 /** Logical groups invalidated together when related data changes. */
@@ -54,6 +54,13 @@ export class ApiCacheService {
 
     const shared = loader().pipe(
       tap((data) => this.set(key, data, scopes)),
+      catchError((err) => {
+        const stale = this.memory.get(key);
+        if (stale) {
+          return of(stale.data as T);
+        }
+        return throwError(() => err);
+      }),
       finalize(() => this.inflight.delete(key)),
       shareReplay({ bufferSize: 1, refCount: false })
     );

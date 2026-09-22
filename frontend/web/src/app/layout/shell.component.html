@@ -100,6 +100,22 @@
   </aside>
 
   <main class="content">
+    @if (outbox.pendingCount() > 0 || outbox.offline() || outbox.syncing()) {
+      <div
+        class="sync-banner"
+        [class.syncing]="outbox.syncing()"
+        [class.offline]="outbox.offline() && !outbox.syncing()"
+        role="status"
+      >
+        @if (outbox.syncing()) {
+          Syncing {{ outbox.pendingCount() }} offline change{{ outbox.pendingCount() === 1 ? '' : 's' }}…
+        } @else if (outbox.pendingCount() > 0) {
+          Offline · {{ outbox.pendingCount() }} change{{ outbox.pendingCount() === 1 ? '' : 's' }} waiting to sync
+        } @else {
+          Server unreachable — new changes will be saved on this device
+        }
+      </div>
+    }
     <router-outlet />
   </main>
 </div>
