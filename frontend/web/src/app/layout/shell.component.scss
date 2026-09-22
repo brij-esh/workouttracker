@@ -278,16 +278,16 @@ nav a.active .nav-icon {
 @media (max-width: 767px) {
   :host {
     height: 100%;
-    max-height: none;
+    max-height: 100%;
   }
 
   .shell {
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-height: none;
+    max-height: 100%;
     overflow: hidden;
-    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 0;
   }
 
   .topbar {
@@ -396,7 +396,13 @@ nav a.active .nav-icon {
     flex: 1 1 auto;
     min-height: 0;
     height: auto;
-    padding: 1rem 0.85rem 1.25rem;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* Scroll clear of the fixed bottom nav. */
+    padding: 0.85rem 0.85rem calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
   }
 }
 

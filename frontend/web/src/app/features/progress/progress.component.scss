@@ -1,6 +1,16 @@
 .progress-page {
   display: grid;
   gap: clamp(1rem, 2.5vw, 1.5rem);
+  width: 100%;
+  min-width: 0;
+  /* Leave room to scroll the last panel clear of the bottom nav. */
+  padding-bottom: 0.5rem;
+}
+
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-hero {
@@ -794,6 +804,44 @@ input {
   .view-toggle {
     width: 100%;
     justify-content: flex-start;
+    scroll-padding-inline: 0.5rem;
+  }
+
+  .view-toggle .ghost {
+    padding: 0.4rem 0.72rem;
+    font-size: 0.88rem;
+  }
+
+  .page-hero {
+    padding: 0.85rem 1rem;
+  }
+
+  .page-hero h1 {
+    font-size: 1.45rem;
+  }
+
+  .lede {
+    margin-top: 0.35rem;
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+
+  .progress-page {
+    gap: 0.85rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .panel {
+    padding: 0.9rem;
+  }
+
+  .progression-banner {
+    padding: 0.7rem 0.85rem;
+    font-size: 0.92rem;
+  }
+
+  .progression-row {
+    padding: 0.65rem 0.75rem;
   }
 
   .chart-wrap {
@@ -810,6 +858,33 @@ input {
 
   .bar-value {
     justify-self: start;
+  }
+}
+
+/* iPhone SE / very short viewports: keep hero compact so detail scrolls above the nav */
+@media (max-width: 390px), (max-height: 700px) and (max-width: 430px) {
+  .page-hero {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .page-hero h1 {
+    font-size: 1.3rem;
+  }
+
+  .lede {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.82rem;
+  }
+
+  .panel-head h2 {
+    font-size: 1.05rem;
+  }
+
+  .strength-detail .stats.strength-stats {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
