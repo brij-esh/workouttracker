@@ -79,6 +79,38 @@
   font-size: 0.9rem;
 }
 
+.onboard-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 1.1rem;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  animation: rise 0.55s ease 0.05s both;
+}
+
+.onboard-banner strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.onboard-banner p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 36rem;
+  line-height: 1.4;
+}
+
+.onboard-banner .primary {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
 .banner {
   margin: 0;
 }

@@ -23,6 +23,16 @@
     }
   </aside>
 
+  @if (needsOnboarding()) {
+    <aside class="onboard-banner" role="status">
+      <div>
+        <strong>Finish setting up your profile</strong>
+        <p>Your account is signed in, but no profile exists yet. Add your details to unlock personalized targets and progress.</p>
+      </div>
+      <a routerLink="/app/profile" class="primary">Complete profile</a>
+    </aside>
+  }
+
   @if (error()) {
     <p class="error banner">{{ error() }}</p>
   }

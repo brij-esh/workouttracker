@@ -37,6 +37,7 @@ export class HomeComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly needsOnboarding = signal(false);
   readonly quote = signal<MotivationalQuote | null>(null);
   readonly quoteLoading = signal(true);
 
@@ -150,15 +151,19 @@ export class HomeComponent implements OnInit {
       next: (data) => {
         this.apply(data);
         this.loading.set(false);
-        if (!data.workouts.length && !data.profile) {
-          this.error.set('Some data could not load. Check that the gateway is running.');
+        this.needsOnboarding.set(data.profileMissing);
+        if (data.profileMissing) {
+          this.error.set(null);
+        } else if (data.profileUnavailable) {
+          this.error.set('Could not load your profile. Check your connection and try again.');
         } else {
           this.error.set(null);
         }
       },
       error: () => {
         this.loading.set(false);
-        this.error.set('Could not load your dashboard. Is the gateway running?');
+        this.needsOnboarding.set(false);
+        this.error.set('Could not load your dashboard. Check your connection and try again.');
       }
     });
   }
