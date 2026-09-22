@@ -3,16 +3,21 @@ import { ActiveWorkoutSession, ActiveWorkoutSessionService } from './active-work
 import { APP_BRAND } from './app-brand';
 
 const NOTIF_TAG = 'wt.active-workout';
+/** How often to refresh the shade while the timer is running (not every second). */
+const REFRESH_MS = 60_000;
 
 /**
- * Keeps a phone notification shade entry (where supported) updated with the
- * live workout timer, and mirrors the time into the browser tab title.
+ * Shows one OS notification for an active workout and updates it sparingly
+ * (start / pause / resume / every minute) so the shade is not spammed.
+ * The browser tab title still shows a live clock.
  */
 @Injectable({ providedIn: 'root' })
 export class WorkoutOsNotificationService {
   private readonly session = inject(ActiveWorkoutSessionService);
   private lastPostedAt = 0;
-  private lastBody = '';
+  private lastPaused: boolean | null = null;
+  private lastWorkoutId: string | null = null;
+  private current: Notification | null = null;
 
   constructor() {
     effect(() => {
@@ -47,7 +52,6 @@ export class WorkoutOsNotificationService {
       return;
     }
 
-    const status = paused ? 'Paused' : 'In progress';
     if (typeof document !== 'undefined') {
       document.title = `⏱ ${display} · ${active.title}`;
     }
@@ -56,14 +60,33 @@ export class WorkoutOsNotificationService {
       return;
     }
 
-    const body = `${active.title} · ${display}`;
     const now = Date.now();
-    // Avoid spamming the shade — refresh about once per second (or on pause flip).
-    if (body === this.lastBody && now - this.lastPostedAt < 950) {
+    const statusChanged = this.lastPaused !== paused;
+    const workoutChanged = this.lastWorkoutId !== active.workoutId;
+    const dueForRefresh = now - this.lastPostedAt >= REFRESH_MS;
+    const firstPost = this.lastPostedAt === 0;
+
+    if (!firstPost && !statusChanged && !workoutChanged && !dueForRefresh) {
       return;
     }
-    this.lastBody = body;
+
+    this.lastPaused = paused;
+    this.lastWorkoutId = active.workoutId;
     this.lastPostedAt = now;
+    this.post(active, display, paused);
+  }
+
+  private post(active: ActiveWorkoutSession, display: string, paused: boolean): void {
+    const status = paused ? 'Paused' : 'In progress';
+    const body = paused
+      ? `${active.title} · paused at ${display}`
+      : `${active.title} · ${display} (updates every min)`;
+
+    try {
+      this.current?.close();
+    } catch {
+      /* ignore */
+    }
 
     try {
       const options: NotificationOptions = {
@@ -75,6 +98,7 @@ export class WorkoutOsNotificationService {
         data: { workoutId: active.workoutId }
       };
       const n = new Notification(`${APP_BRAND.name} · ${status}`, options);
+      this.current = n;
       n.onclick = () => {
         try {
           window.focus();
@@ -87,12 +111,19 @@ export class WorkoutOsNotificationService {
         n.close();
       };
     } catch {
-      /* ignore */
+      this.current = null;
     }
   }
 
   private clear(): void {
-    this.lastBody = '';
     this.lastPostedAt = 0;
+    this.lastPaused = null;
+    this.lastWorkoutId = null;
+    try {
+      this.current?.close();
+    } catch {
+      /* ignore */
+    }
+    this.current = null;
   }
 }
