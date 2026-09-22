@@ -70,7 +70,14 @@
     <section class="card list">
       <div class="list-head">
         <h2>Exercises</h2>
-        <span class="muted">Tap Sets to log each set and start rest</span>
+        <div class="list-head-actions">
+          <span class="muted list-hint">Tap Sets to log each set and start rest</span>
+          @if (canEdit()) {
+            <button type="button" class="primary tiny add-exercise-btn" (click)="openAddModal()">
+              Add exercise
+            </button>
+          }
+        </div>
       </div>
 
       @for (ex of exercises(); track ex.id) {
@@ -210,12 +217,6 @@
         </div>
       }
     </section>
-
-    @if (canEdit()) {
-      <div class="mobile-add-bar">
-        <button type="button" class="primary" (click)="openAddModal()">Add exercise</button>
-      </div>
-    }
   }
 </section>
 

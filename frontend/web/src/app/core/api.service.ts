@@ -493,12 +493,10 @@ export class ApiService {
   }
 
   getStepsForDay(date?: string): Observable<StepLog | null> {
-    const qs = date ? `?date=${date}` : '';
-    return this.cached(`steps:day:${date ?? 'today'}`, ['progress'], () =>
-      this.http.get<StepLog>(`${this.base}/progress/steps/day${qs}`, { observe: 'response' }).pipe(
-        map((res) => (res.status === 204 ? null : (res.body ?? null))),
-        catchError(() => of(null))
-      )
+    const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+    return this.http.get<StepLog | null>(`${this.base}/progress/steps/day${qs}`).pipe(
+      map((body) => body ?? null),
+      catchError(() => of(null))
     );
   }
 

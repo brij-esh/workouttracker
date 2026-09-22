@@ -354,6 +354,15 @@ nav a.active .nav-icon {
     max-height: 100%;
     overflow: hidden;
     padding-bottom: 0;
+    /* Extra gap so last controls clear the fixed bottom nav on phones/PWA. */
+    --content-bottom-gap: 1.75rem;
+    --bottom-nav-clearance: calc(
+      var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + var(--content-bottom-gap)
+    );
+  }
+
+  .shell.has-workout-fab {
+    --content-bottom-gap: 4.25rem;
   }
 
   .topbar {
@@ -470,13 +479,7 @@ nav a.active .nav-icon {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     /* Scroll clear of fixed bottom nav + home-screen safe area. */
-    padding: 0.75rem 0.75rem
-      calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 2.75rem);
-  }
-
-  .shell.has-workout-fab .content {
-    /* Extra room so docked timer + nav never cover primary actions. */
-    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 5.5rem);
+    padding: 0.75rem 0.75rem var(--bottom-nav-clearance);
   }
 
   .content > :not(.sync-banner) {
@@ -487,7 +490,26 @@ nav a.active .nav-icon {
   }
 }
 
+@media (max-width: 540px) {
+  .shell {
+    --content-bottom-gap: 2.25rem;
+  }
+
+  .shell.has-workout-fab {
+    --content-bottom-gap: 4.75rem;
+  }
+}
+
 @media (max-width: 420px) {
+  .shell {
+    --bottom-nav-h: 4.6rem;
+    --content-bottom-gap: 2.5rem;
+  }
+
+  .shell.has-workout-fab {
+    --content-bottom-gap: 5rem;
+  }
+
   .brand-text strong {
     font-size: 0.92rem;
   }

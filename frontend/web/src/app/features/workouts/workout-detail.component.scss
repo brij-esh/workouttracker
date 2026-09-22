@@ -312,8 +312,20 @@
   margin-top: 0.25rem;
 }
 
-.mobile-add-bar {
-  display: none;
+.list-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.list-hint {
+  font-size: 0.85rem;
+}
+
+.add-exercise-btn {
+  flex-shrink: 0;
 }
 
 .detail-line {
@@ -501,23 +513,18 @@
     margin-bottom: 0.35rem;
   }
 
-  .hero-actions .primary {
-    display: none;
+  .list-head {
+    align-items: flex-start;
   }
 
-  .mobile-add-bar {
-    display: block;
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    margin: 0.75rem 0 0;
-    padding: 0.65rem 0 0.25rem;
-    background: linear-gradient(180deg, transparent, var(--bg) 28%);
-  }
-
-  .mobile-add-bar .primary {
+  .list-head-actions {
     width: 100%;
-    min-height: 2.75rem;
+    justify-content: space-between;
+  }
+
+  .list-hint {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .form-actions {

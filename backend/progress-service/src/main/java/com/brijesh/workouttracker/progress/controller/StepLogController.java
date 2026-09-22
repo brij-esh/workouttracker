@@ -50,9 +50,6 @@ public class StepLogController {
     ) {
         LocalDate day = date != null ? date : LocalDate.now();
         StepLogResponse body = stepLogService.getForDate(userId, day);
-        if (body == null) {
-            return ResponseEntity.noContent().build();
-        }
         return ResponseEntity.ok(body);
     }
 
