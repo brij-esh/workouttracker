@@ -44,8 +44,6 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   readonly viewYear = signal(new Date().getFullYear());
   readonly viewMonth = signal(new Date().getMonth()); // 0-11
   readonly panelMode = signal<PanelMode>('days');
-  /** First year shown in the years grid (12-year page). */
-  readonly yearPageStart = signal(Math.floor(new Date().getFullYear() / 12) * 12);
   private readonly cvaDisabled = signal(false);
 
   readonly isDisabled = computed(() => this.disabledInput() || this.cvaDisabled());
@@ -84,10 +82,16 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   private onChange: (value: string) => void = () => undefined;
   private onTouched: () => void = () => undefined;
   private panelEl: HTMLDivElement | null = null;
-  private readonly onScrollCapture = (): void => {
-    if (this.open()) {
-      this.positionPanel();
+  private readonly onScrollCapture = (event: Event): void => {
+    if (!this.open()) {
+      return;
     }
+    // Ignore scrolls inside the panel (year list) so picking stays usable.
+    const target = event.target as Node | null;
+    if (target && this.panelEl?.contains(target)) {
+      return;
+    }
+    this.positionPanel();
   };
 
   readonly weekdayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -118,7 +122,6 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     if (d) {
       this.viewYear.set(d.getFullYear());
       this.viewMonth.set(d.getMonth());
-      this.yearPageStart.set(Math.floor(d.getFullYear() / 12) * 12);
     }
   }
 
@@ -147,7 +150,6 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     const d = parseIsoDate(this.value()) ?? new Date();
     this.viewYear.set(d.getFullYear());
     this.viewMonth.set(d.getMonth());
-    this.yearPageStart.set(Math.floor(d.getFullYear() / 12) * 12);
     this.panelMode.set('days');
     this.openPanel();
     this.onTouched();
@@ -280,37 +282,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   }
 
   private renderDays(panel: HTMLDivElement): void {
-    const head = document.createElement('div');
-    head.className = 'app-date-head';
-
-    const prev = document.createElement('button');
-    prev.type = 'button';
-    prev.className = 'app-date-nav';
-    prev.setAttribute('aria-label', 'Previous month');
-    prev.textContent = '‹';
-    prev.addEventListener('click', (e) => this.prevMonth(e));
-
-    const title = document.createElement('button');
-    title.type = 'button';
-    title.className = 'app-date-title';
-    title.setAttribute('aria-label', 'Choose month and year');
-    title.textContent = this.monthTitle();
-    title.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.panelMode.set('months');
-      this.renderPanel();
-    });
-
-    const next = document.createElement('button');
-    next.type = 'button';
-    next.className = 'app-date-nav';
-    next.setAttribute('aria-label', 'Next month');
-    next.textContent = '›';
-    next.addEventListener('click', (e) => this.nextMonth(e));
-
-    head.append(prev, title, next);
-    panel.appendChild(head);
-
+    panel.appendChild(this.buildDayHead());
     const dow = document.createElement('div');
     dow.className = 'app-date-dow';
     for (const label of this.weekdayLabels) {
@@ -365,29 +337,41 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     panel.appendChild(foot);
   }
 
-  private renderMonths(panel: HTMLDivElement): void {
+  /** Prev / Month / Year / Next — month & year open their own pickers. */
+  private buildDayHead(): HTMLDivElement {
     const head = document.createElement('div');
-    head.className = 'app-date-head';
+    head.className = 'app-date-head app-date-head-split';
 
     const prev = document.createElement('button');
     prev.type = 'button';
     prev.className = 'app-date-nav';
-    prev.setAttribute('aria-label', 'Previous year');
+    prev.setAttribute('aria-label', 'Previous month');
     prev.textContent = '‹';
-    prev.addEventListener('click', (e) => {
+    prev.addEventListener('click', (e) => this.prevMonth(e));
+
+    const monthBtn = document.createElement('button');
+    monthBtn.type = 'button';
+    monthBtn.className = 'app-date-pick-btn';
+    monthBtn.setAttribute('aria-label', 'Choose month');
+    const monthName = new Date(this.viewYear(), this.viewMonth(), 1).toLocaleDateString(undefined, {
+      month: 'short'
+    });
+    monthBtn.innerHTML = `<span>${monthName}</span><span class="app-date-caret" aria-hidden="true">▾</span>`;
+    monthBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      this.viewYear.update((y) => y - 1);
+      this.panelMode.set('months');
       this.renderPanel();
     });
 
-    const title = document.createElement('button');
-    title.type = 'button';
-    title.className = 'app-date-title';
-    title.setAttribute('aria-label', 'Choose year');
-    title.textContent = String(this.viewYear());
-    title.addEventListener('click', (e) => {
+    const yearBtn = document.createElement('button');
+    yearBtn.type = 'button';
+    yearBtn.className = 'app-date-pick-btn';
+    yearBtn.setAttribute('aria-label', 'Choose year');
+    yearBtn.innerHTML = `<span>${this.viewYear()}</span><span class="app-date-caret" aria-hidden="true">▾</span>`;
+    yearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      this.yearPageStart.set(Math.floor(this.viewYear() / 12) * 12);
       this.panelMode.set('years');
       this.renderPanel();
     });
@@ -395,20 +379,46 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     const next = document.createElement('button');
     next.type = 'button';
     next.className = 'app-date-nav';
-    next.setAttribute('aria-label', 'Next year');
+    next.setAttribute('aria-label', 'Next month');
     next.textContent = '›';
-    next.addEventListener('click', (e) => {
+    next.addEventListener('click', (e) => this.nextMonth(e));
+
+    const picks = document.createElement('div');
+    picks.className = 'app-date-picks';
+    picks.append(monthBtn, yearBtn);
+
+    head.append(prev, picks, next);
+    return head;
+  }
+
+  private renderMonths(panel: HTMLDivElement): void {
+    const head = document.createElement('div');
+    head.className = 'app-date-head';
+
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'app-date-nav';
+    back.setAttribute('aria-label', 'Back to calendar');
+    back.textContent = '‹';
+    back.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.viewYear.update((y) => y + 1);
+      this.panelMode.set('days');
       this.renderPanel();
     });
 
-    head.append(prev, title, next);
+    const title = document.createElement('strong');
+    title.className = 'app-date-title static';
+    title.textContent = 'Month';
+
+    const spacer = document.createElement('span');
+    spacer.className = 'app-date-nav-spacer';
+
+    head.append(back, title, spacer);
     panel.appendChild(head);
 
     const hint = document.createElement('p');
     hint.className = 'app-date-hint';
-    hint.textContent = 'Pick a month';
+    hint.textContent = 'All 12 months';
     panel.appendChild(hint);
 
     const grid = document.createElement('div');
@@ -423,6 +433,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
       }
       btn.textContent = this.monthLabels[m];
       btn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         this.viewMonth.set(m);
         this.panelMode.set('days');
@@ -434,81 +445,74 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   }
 
   private renderYears(panel: HTMLDivElement): void {
-    const start = this.yearPageStart();
-    const end = start + 11;
-
     const head = document.createElement('div');
     head.className = 'app-date-head';
 
-    const prev = document.createElement('button');
-    prev.type = 'button';
-    prev.className = 'app-date-nav';
-    prev.setAttribute('aria-label', 'Earlier years');
-    prev.textContent = '‹';
-    prev.addEventListener('click', (e) => {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'app-date-nav';
+    back.setAttribute('aria-label', 'Back to calendar');
+    back.textContent = '‹';
+    back.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.yearPageStart.update((y) => y - 12);
+      this.panelMode.set('days');
       this.renderPanel();
     });
 
     const title = document.createElement('strong');
     title.className = 'app-date-title static';
-    title.textContent = `${start} – ${end}`;
+    title.textContent = 'Year';
 
-    const next = document.createElement('button');
-    next.type = 'button';
-    next.className = 'app-date-nav';
-    next.setAttribute('aria-label', 'Later years');
-    next.textContent = '›';
-    next.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.yearPageStart.update((y) => y + 12);
-      this.renderPanel();
-    });
+    const spacer = document.createElement('span');
+    spacer.className = 'app-date-nav-spacer';
 
-    head.append(prev, title, next);
+    head.append(back, title, spacer);
     panel.appendChild(head);
 
     const hint = document.createElement('p');
     hint.className = 'app-date-hint';
-    hint.textContent = 'Pick a year';
+    hint.textContent = 'Scroll to find your year';
     panel.appendChild(hint);
 
-    const grid = document.createElement('div');
-    grid.className = 'app-date-grid app-date-grid-years';
-    const selectedYear = this.viewYear();
     const thisYear = new Date().getFullYear();
-    const minY = this.boundYear('min');
-    const maxY = this.boundYear('max');
+    const minY = this.boundYear('min') ?? thisYear - 100;
+    const maxY = this.boundYear('max') ?? thisYear;
+    const selectedYear = Math.min(maxY, Math.max(minY, this.viewYear()));
 
-    for (let y = start; y <= end; y++) {
+    const scroll = document.createElement('div');
+    scroll.className = 'app-date-year-scroll';
+    scroll.setAttribute('role', 'listbox');
+    scroll.setAttribute('aria-label', 'Years');
+
+    let selectedBtn: HTMLButtonElement | null = null;
+    for (let y = maxY; y >= minY; y--) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'app-date-chip';
+      btn.className = 'app-date-year-row';
+      btn.setAttribute('role', 'option');
       if (y === selectedYear) {
         btn.classList.add('selected');
+        btn.setAttribute('aria-selected', 'true');
+        selectedBtn = btn;
       }
       if (y === thisYear) {
         btn.classList.add('today');
       }
-      const out = (minY != null && y < minY) || (maxY != null && y > maxY);
-      if (out) {
-        btn.disabled = true;
-        btn.classList.add('disabled');
-      }
       btn.textContent = String(y);
       btn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        if (out) {
-          return;
-        }
         this.viewYear.set(y);
-        this.panelMode.set('months');
+        this.panelMode.set('days');
         this.renderPanel();
       });
-      grid.appendChild(btn);
+      scroll.appendChild(btn);
     }
-    panel.appendChild(grid);
+    panel.appendChild(scroll);
+
+    requestAnimationFrame(() => {
+      selectedBtn?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    });
   }
 
   private boundYear(kind: 'min' | 'max'): number | null {
@@ -548,7 +552,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     const spaceBelow = window.innerHeight - rect.bottom - pad;
     const spaceAbove = rect.top - pad;
     const openUp = spaceBelow < 320 && spaceAbove > spaceBelow;
-    const maxHeight = Math.min(420, openUp ? spaceAbove - 6 : spaceBelow - 6);
+    const maxHeight = Math.min(480, openUp ? spaceAbove - 6 : spaceBelow - 6);
 
     panel.style.cssText = [
       'position:fixed',
@@ -558,7 +562,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
       `max-width:${width}px`,
       'min-width:0',
       `left:${left}px`,
-      `max-height:${Math.max(260, maxHeight)}px`,
+      `max-height:${Math.max(300, maxHeight)}px`,
       'overflow:auto',
       openUp
         ? `top:auto;bottom:${Math.max(pad, window.innerHeight - rect.top + 6)}px`
