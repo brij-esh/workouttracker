@@ -15,7 +15,7 @@ export class WorkoutOsNotificationService {
   private lastPaused: boolean | null = null;
   private lastWorkoutId: string | null = null;
   private current: Notification | null = null;
-  private baseTitle = APP_BRAND.name;
+  private baseTitle: string = APP_BRAND.name;
 
   constructor() {
     if (typeof document !== 'undefined') {
