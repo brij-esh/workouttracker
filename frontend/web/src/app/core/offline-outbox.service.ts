@@ -43,10 +43,10 @@ export class OfflineOutboxService {
       return;
     }
     window.addEventListener('online', () => {
-      this.offline.set(false);
+      this.setOffline(false);
       void this.flush();
     });
-    window.addEventListener('offline', () => this.offline.set(true));
+    window.addEventListener('offline', () => this.setOffline(true));
     void this.refreshCount();
     this.flushTimer = setInterval(() => void this.flush(), 15_000);
     queueMicrotask(() => void this.flush());
@@ -60,23 +60,28 @@ export class OfflineOutboxService {
 
   async isServerReachable(): Promise<boolean> {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.offline.set(true);
+      this.setOffline(true);
       return false;
     }
     try {
       // Any HTTP response (incl. 401) means the gateway answered.
-      // Network / CORS failures throw and mean unreachable.
       await fetch(this.healthUrl(), {
         method: 'GET',
         cache: 'no-store',
         credentials: 'omit',
         headers: { Accept: 'application/json' }
       });
-      this.offline.set(false);
+      this.setOffline(false);
       return true;
     } catch {
-      this.offline.set(true);
+      this.setOffline(true);
       return false;
+    }
+  }
+
+  private setOffline(value: boolean): void {
+    if (this.offline() !== value) {
+      this.offline.set(value);
     }
   }
 
@@ -125,6 +130,16 @@ export class OfflineOutboxService {
     if (!uid) {
       return;
     }
+
+    // Quiet no-op when nothing is queued — avoids UI flicker from the 15s poll.
+    const queued = await this.listForUser(uid);
+    if (!queued.length) {
+      if (this.pendingCount() !== 0) {
+        this.pendingCount.set(0);
+      }
+      return;
+    }
+
     if (!(await this.isServerReachable())) {
       return;
     }
@@ -132,7 +147,7 @@ export class OfflineOutboxService {
     this.flushing = true;
     this.syncing.set(true);
     try {
-      const queue = (await this.listForUser(uid)).sort((a, b) => a.createdAt - b.createdAt);
+      const queue = queued.sort((a, b) => a.createdAt - b.createdAt);
       let synced = 0;
       for (const entry of queue) {
         try {

@@ -51,9 +51,14 @@ export class ShellComponent implements OnInit {
       .subscribe(() => this.badge.refresh());
   }
 
-  /** Hard refresh into Home so the app reloads cleanly. */
+  /** Go Home without a full page reload (avoids a visible UI flash). */
   hardRefreshHome(): void {
-    window.location.assign('/app');
+    const url = this.router.url.split('?')[0];
+    if (url === '/app' || url === '/app/') {
+      this.badge.refresh();
+      return;
+    }
+    void this.router.navigateByUrl('/app');
   }
 
   openActiveWorkout(): void {

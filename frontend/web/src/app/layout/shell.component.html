@@ -113,7 +113,7 @@
   </aside>
 
   <main class="content">
-    @if (outbox.pendingCount() > 0 || outbox.syncing()) {
+    @if (outbox.pendingCount() > 0) {
       <div
         class="sync-banner"
         [class.syncing]="outbox.syncing()"
