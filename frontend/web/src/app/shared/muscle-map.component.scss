@@ -1,0 +1,180 @@
+.muscle-map {
+  display: grid;
+  gap: 0.85rem;
+  color: var(--text);
+}
+
+.map-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.map-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.sub {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 70%, var(--panel));
+}
+
+.view-toggle .ghost {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.view-toggle .ghost.active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  color: var(--text);
+  font-weight: 600;
+}
+
+.figure-wrap {
+  display: grid;
+  place-items: center;
+  padding: 0.65rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 50% 18%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
+    color-mix(in srgb, var(--bg) 40%, var(--panel));
+  min-height: 22rem;
+}
+
+.figure {
+  position: relative;
+  width: min(100%, 15.5rem);
+  aspect-ratio: 2 / 3;
+}
+
+.body-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent;
+  border-radius: 0;
+  user-select: none;
+  pointer-events: none;
+  /* Dark theme: keep body readable on dark panels */
+  filter: contrast(1.04) brightness(1.02);
+  transition: filter 0.25s ease;
+}
+
+:host-context(html[data-theme='light']) .body-photo {
+  /* Light theme: slightly softer body so it sits on light panels */
+  filter: contrast(1.02) brightness(1.08) saturate(0.95);
+}
+
+.muscle-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.outline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 22%, transparent);
+  stroke-width: 2;
+}
+
+.muscle {
+  fill: color-mix(in srgb, var(--text) 7%, transparent);
+  stroke: color-mix(in srgb, var(--text) 14%, transparent);
+  stroke-width: 1;
+  transition: fill 0.35s ease, stroke 0.35s ease, filter 0.35s ease, opacity 0.35s ease;
+}
+
+.muscle.secondary {
+  fill: color-mix(in srgb, var(--accent) 38%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: secondaryGlow 2.4s ease-in-out infinite;
+}
+
+.muscle.primary {
+  fill: color-mix(in srgb, var(--accent) 78%, transparent);
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 50%, transparent));
+  animation: primaryPulse 1.6s ease-in-out infinite;
+}
+
+.legend {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+}
+
+.swatch.primary {
+  background: var(--accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.swatch.secondary {
+  background: color-mix(in srgb, var(--accent) 35%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+
+@keyframes primaryPulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes secondaryGlow {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle.primary,
+  .muscle.secondary {
+    animation: none !important;
+  }
+}

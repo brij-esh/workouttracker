@@ -1,0 +1,1465 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-workouttracker01",
+    "name": "Workout Tracker \u2014 API Gateway",
+    "description": "Master collection for Workout Tracker.\n\n**All requests go through the API Gateway only** (`{{gatewayBaseUrl}}`).\n\n## Setup\n1. Import this collection and `Workout-Tracker.local.postman_environment.json`.\n2. Select the **Workout Tracker \u2014 Local** environment.\n3. Set `firebaseToken` to a valid Firebase ID token.\n4. Run **Users \u2192 Create Profile** once per Firebase user, then use the rest.\n\n## Extending\nAdd new requests under the matching service folder. Keep paths under `/api/v1/...` so they stay gateway-routed.\n\n| Folder | Gateway path | Upstream |\n|--------|--------------|----------|\n| Users | `/api/v1/users/**` | :8081 |\n| Workouts | `/api/v1/workouts/**` | :8082 |\n| Progress | `/api/v1/progress/**`, `/api/v1/body-measurements/**` | :8083 |\n| Nutrition | `/api/v1/nutrition/**`, `/api/v1/water/**` | :8084 |\n| Notifications | `/api/v1/notifications/**` | :8085 |\n| Gateway | actuator / health | :8080 |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{firebaseToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "gatewayBaseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "apiVersion",
+      "value": "v1"
+    },
+    {
+      "key": "workoutId",
+      "value": ""
+    },
+    {
+      "key": "weightLogId",
+      "value": ""
+    },
+    {
+      "key": "bodyMeasurementId",
+      "value": ""
+    },
+    {
+      "key": "personalRecordId",
+      "value": ""
+    },
+    {
+      "key": "mealId",
+      "value": ""
+    },
+    {
+      "key": "waterLogId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Gateway",
+      "description": "Gateway health checks (no auth required for `/actuator/health`).",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/actuator/health",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Public gateway health endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Users",
+      "description": "User profile APIs via gateway \u2192 user-service.\n\nEnums:\n- `gender`: MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY\n- `fitnessGoal`: LOSE_WEIGHT | BUILD_MUSCLE | STAY_FIT | ENDURANCE | GENERAL_HEALTH\n- `activityLevel`: SEDENTARY | LIGHT | MODERATE | ACTIVE | VERY_ACTIVE\n- `preferredUnits`: METRIC | IMPERIAL",
+      "item": [
+        {
+          "name": "Create Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('userProfileId', body.id);",
+                  "    pm.collectionVariables.set('firebaseUid', body.firebaseUid);",
+                  "    pm.test('Profile created', () => pm.expect(body.displayName).to.be.ok);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Brijesh Yadav\",\n  \"heightCm\": 175.5,\n  \"weightKg\": 72.0,\n  \"dateOfBirth\": \"1995-05-20\",\n  \"gender\": \"MALE\",\n  \"fitnessGoal\": \"BUILD_MUSCLE\",\n  \"activityLevel\": \"MODERATE\",\n  \"preferredUnits\": \"METRIC\",\n  \"onboardingCompleted\": true\n}"
+            },
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/users",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "users"
+              ]
+            },
+            "description": "Create the authenticated user's profile.\n\n- Uses Firebase UID / email from the gateway after token verification.\n- Returns **409** if a profile already exists."
+          },
+          "response": [
+            {
+              "name": "Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Brijesh Yadav\",\n  \"heightCm\": 175.5,\n  \"weightKg\": 72.0,\n  \"dateOfBirth\": \"1995-05-20\",\n  \"gender\": \"MALE\",\n  \"fitnessGoal\": \"BUILD_MUSCLE\",\n  \"activityLevel\": \"MODERATE\",\n  \"preferredUnits\": \"METRIC\",\n  \"onboardingCompleted\": true\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/users",
+                  "host": [
+                    "{{gatewayBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "users"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"a1ed8de3-07f0-4293-85a5-cea9f5673a0a\",\n  \"firebaseUid\": \"8CdTeUOHAcegMd6LYU3JFxUP3sG3\",\n  \"email\": \"user@example.com\",\n  \"displayName\": \"Brijesh Yadav\",\n  \"heightCm\": 175.5,\n  \"weightKg\": 72,\n  \"dateOfBirth\": \"1995-05-20\",\n  \"gender\": \"MALE\",\n  \"fitnessGoal\": \"BUILD_MUSCLE\",\n  \"activityLevel\": \"MODERATE\",\n  \"preferredUnits\": \"METRIC\",\n  \"onboardingCompleted\": true,\n  \"createdAt\": \"2026-09-17T17:23:12.122102Z\",\n  \"updatedAt\": \"2026-09-17T17:23:12.122102Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('userProfileId', body.id);",
+                  "    pm.collectionVariables.set('firebaseUid', body.firebaseUid);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/users/me",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Get the authenticated user's profile.\n\nReturns **404** if the profile has not been created yet."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Brijesh Yadav\",\n  \"heightCm\": 176.0,\n  \"weightKg\": 74.0,\n  \"dateOfBirth\": \"1995-05-20\",\n  \"gender\": \"MALE\",\n  \"fitnessGoal\": \"STAY_FIT\",\n  \"activityLevel\": \"ACTIVE\",\n  \"preferredUnits\": \"METRIC\",\n  \"onboardingCompleted\": true\n}"
+            },
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/users/me",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Replace the authenticated user's profile fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete My Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/users/me",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Delete the authenticated user's profile. Returns **204**."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Workouts",
+      "description": "Workout CRUD via gateway \u2192 workout-service.\n\nCreate / List / Get / Update / Delete are implemented.\n`workoutId` is saved automatically after Create.",
+      "item": [
+        {
+          "name": "Create Workout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('workoutId', body.id);",
+                  "    pm.test('Workout created', () => pm.expect(body.id).to.be.ok);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Push Day\",\n  \"description\": \"Chest and triceps\",\n  \"workoutDate\": \"2026-09-17\",\n  \"durationMinutes\": 60,\n  \"caloriesBurned\": 350\n}"
+            },
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "workouts"
+              ]
+            },
+            "description": "Create a workout owned by the authenticated user.\n\nSaves `workoutId` into collection variables for later requests."
+          },
+          "response": [
+            {
+              "name": "Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Push Day\",\n  \"description\": \"Chest and triceps\",\n  \"workoutDate\": \"2026-09-17\",\n  \"durationMinutes\": 60,\n  \"caloriesBurned\": 350\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts",
+                  "host": [
+                    "{{gatewayBaseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "{{apiVersion}}",
+                    "workouts"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"userId\": \"8CdTeUOHAcegMd6LYU3JFxUP3sG3\",\n  \"name\": \"Push Day\",\n  \"description\": \"Chest and triceps\",\n  \"workoutDate\": \"2026-09-17\",\n  \"durationMinutes\": 60,\n  \"caloriesBurned\": 350,\n  \"createdAt\": \"2026-09-17T17:23:12.122102Z\",\n  \"updatedAt\": \"2026-09-17T17:23:12.122102Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List My Workouts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "workouts"
+              ]
+            },
+            "description": "List workouts for the authenticated user (newest first)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Workout By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts/{{workoutId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "workouts",
+                "{{workoutId}}"
+              ]
+            },
+            "description": "Get one workout by id. Returns **404** if missing or not owned by the caller."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Workout",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Push Day - Updated\",\n  \"description\": \"Chest, shoulders and triceps\",\n  \"workoutDate\": \"2026-09-17\",\n  \"durationMinutes\": 75,\n  \"caloriesBurned\": 450\n}"
+            },
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts/{{workoutId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "workouts",
+                "{{workoutId}}"
+              ]
+            },
+            "description": "Update an owned workout. Uses `{{workoutId}}` from Create."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Workout",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/workouts/{{workoutId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "workouts",
+                "{{workoutId}}"
+              ]
+            },
+            "description": "Delete an owned workout. Returns **204**."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Progress",
+      "description": "Progress APIs via gateway \u2192 progress-service (:8083).\n\nIncludes weight logs, body measurements, personal records, and summary.\n\n`recordType`: WEIGHT_KG | REPS | DURATION_SECONDS | DISTANCE_M",
+      "item": [
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/summary",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "summary"
+              ]
+            },
+            "description": "Get Summary"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Weight Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/weight",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recordedOn\": \"2026-09-19\",\n  \"weightKg\": 74.5,\n  \"notes\": \"Morning weigh-in\"\n}"
+            },
+            "description": "Create Weight Log"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"weightLogId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Weight Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/weight",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "weight"
+              ]
+            },
+            "description": "List Weight Logs"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weight Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/weight/{{weightLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "weight",
+                "{{weightLogId}}"
+              ]
+            },
+            "description": "Get Weight Log"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Weight Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/weight/{{weightLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "weight",
+                "{{weightLogId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recordedOn\": \"2026-09-19\",\n  \"weightKg\": 74.0,\n  \"notes\": \"Updated\"\n}"
+            },
+            "description": "Update Weight Log"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Weight Log",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/weight/{{weightLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "weight",
+                "{{weightLogId}}"
+              ]
+            },
+            "description": "Delete Weight Log"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Body Measurement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/body-measurements",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "body-measurements"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recordedOn\": \"2026-09-19\",\n  \"chestCm\": 102.0,\n  \"waistCm\": 84.0,\n  \"hipsCm\": 98.0,\n  \"leftArmCm\": 36.0,\n  \"rightArmCm\": 36.5,\n  \"leftThighCm\": 58.0,\n  \"rightThighCm\": 58.5,\n  \"neckCm\": 38.0,\n  \"notes\": \"Weekly check\"\n}"
+            },
+            "description": "Create Body Measurement"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"bodyMeasurementId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Body Measurements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/body-measurements",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "body-measurements"
+              ]
+            },
+            "description": "List Body Measurements"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Body Measurement",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/body-measurements/{{bodyMeasurementId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "body-measurements",
+                "{{bodyMeasurementId}}"
+              ]
+            },
+            "description": "Get Body Measurement"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Body Measurement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/body-measurements/{{bodyMeasurementId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "body-measurements",
+                "{{bodyMeasurementId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recordedOn\": \"2026-09-19\",\n  \"chestCm\": 103.0,\n  \"waistCm\": 83.0,\n  \"hipsCm\": 97.0,\n  \"leftArmCm\": 36.5,\n  \"rightArmCm\": 37.0,\n  \"leftThighCm\": 58.5,\n  \"rightThighCm\": 59.0,\n  \"neckCm\": 38.0,\n  \"notes\": \"Updated\"\n}"
+            },
+            "description": "Update Body Measurement"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Body Measurement",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/body-measurements/{{bodyMeasurementId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "body-measurements",
+                "{{bodyMeasurementId}}"
+              ]
+            },
+            "description": "Delete Body Measurement"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Personal Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/personal-records",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "personal-records"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciseName\": \"Bench Press\",\n  \"recordType\": \"WEIGHT_KG\",\n  \"value\": 100.0,\n  \"recordedOn\": \"2026-09-19\",\n  \"notes\": \"New PR\"\n}"
+            },
+            "description": "Create Personal Record"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"personalRecordId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Personal Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/personal-records",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "personal-records"
+              ]
+            },
+            "description": "List Personal Records"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Personal Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/personal-records/{{personalRecordId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "personal-records",
+                "{{personalRecordId}}"
+              ]
+            },
+            "description": "Get Personal Record"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Personal Record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/personal-records/{{personalRecordId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "personal-records",
+                "{{personalRecordId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciseName\": \"Bench Press\",\n  \"recordType\": \"WEIGHT_KG\",\n  \"value\": 102.5,\n  \"recordedOn\": \"2026-09-19\",\n  \"notes\": \"Updated PR\"\n}"
+            },
+            "description": "Update Personal Record"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Personal Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/progress/personal-records/{{personalRecordId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "progress",
+                "personal-records",
+                "{{personalRecordId}}"
+              ]
+            },
+            "description": "Delete Personal Record"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Nutrition",
+      "description": "Nutrition APIs via gateway \u2192 nutrition-service (:8084).\n\n`mealType`: BREAKFAST | LUNCH | DINNER | SNACK",
+      "item": [
+        {
+          "name": "Upsert Nutrition Targets",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/targets",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "targets"
+              ]
+            },
+            "description": "Upsert Nutrition Targets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calorieTarget\": 2200,\n  \"proteinGTarget\": 150.0,\n  \"carbsGTarget\": 220.0,\n  \"fatGTarget\": 70.0,\n  \"waterMlTarget\": 3000\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Nutrition Targets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/targets",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "targets"
+              ]
+            },
+            "description": "Get Nutrition Targets"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Meal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals"
+              ]
+            },
+            "description": "Create Meal",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mealDate\": \"2026-09-19\",\n  \"mealType\": \"LUNCH\",\n  \"name\": \"Chicken bowl\",\n  \"calories\": 550,\n  \"proteinG\": 40.0,\n  \"carbsG\": 45.0,\n  \"fatG\": 15.0,\n  \"notes\": \"Post workout\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"mealId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals"
+              ]
+            },
+            "description": "List Meals"
+          },
+          "response": []
+        },
+        {
+          "name": "List Meals By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals?date=2026-09-19",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-09-19"
+                }
+              ]
+            },
+            "description": "List Meals By Date"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Meal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals/{{mealId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals",
+                "{{mealId}}"
+              ]
+            },
+            "description": "Get Meal"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Meal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals/{{mealId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals",
+                "{{mealId}}"
+              ]
+            },
+            "description": "Update Meal",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mealDate\": \"2026-09-19\",\n  \"mealType\": \"LUNCH\",\n  \"name\": \"Chicken bowl updated\",\n  \"calories\": 600,\n  \"proteinG\": 45.0,\n  \"carbsG\": 50.0,\n  \"fatG\": 16.0,\n  \"notes\": \"Updated\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Meal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/meals/{{mealId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "meals",
+                "{{mealId}}"
+              ]
+            },
+            "description": "Delete Meal"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Water Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/water",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "water"
+              ]
+            },
+            "description": "Create Water Log",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loggedOn\": \"2026-09-19\",\n  \"amountMl\": 250,\n  \"notes\": \"Glass of water\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"waterLogId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Water Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/water",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "water"
+              ]
+            },
+            "description": "List Water Logs"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Water Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/water/{{waterLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "water",
+                "{{waterLogId}}"
+              ]
+            },
+            "description": "Get Water Log"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Water Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/water/{{waterLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "water",
+                "{{waterLogId}}"
+              ]
+            },
+            "description": "Update Water Log",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loggedOn\": \"2026-09-19\",\n  \"amountMl\": 500,\n  \"notes\": \"Updated\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Water Log",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/water/{{waterLogId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "water",
+                "{{waterLogId}}"
+              ]
+            },
+            "description": "Delete Water Log"
+          },
+          "response": []
+        },
+        {
+          "name": "Daily Nutrition Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/nutrition/daily?date=2026-09-19",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "nutrition",
+                "daily"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-09-19"
+                }
+              ]
+            },
+            "description": "Daily Nutrition Summary"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Notifications",
+      "description": "Notification APIs via gateway \u2192 notification-service (:8085).\n\n`type`: WORKOUT_REMINDER | PROGRESS_UPDATE | NUTRITION_REMINDER | SYSTEM | GENERAL\n\nKafka event consumers can be added later; REST create is available for testing now.",
+      "item": [
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications"
+              ]
+            },
+            "description": "Create Notification",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"WORKOUT_REMINDER\",\n  \"title\": \"Time to train\",\n  \"message\": \"Your Push Day workout is scheduled for today.\",\n  \"referenceId\": \"workout-123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set(\"notificationId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications"
+              ]
+            },
+            "description": "List Notifications"
+          },
+          "response": []
+        },
+        {
+          "name": "List Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications?unreadOnly=true",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "unreadOnly",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "List Unread Notifications"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications/unread-count",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Get Unread Count"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications/{{notificationId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications",
+                "{{notificationId}}"
+              ]
+            },
+            "description": "Get Notification"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "Mark Notification Read"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications/read-all",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "Mark All Read"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayBaseUrl}}/api/{{apiVersion}}/notifications/{{notificationId}}",
+              "host": [
+                "{{gatewayBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{{apiVersion}}",
+                "notifications",
+                "{{notificationId}}"
+              ]
+            },
+            "description": "Delete Notification"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

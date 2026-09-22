@@ -1,0 +1,223 @@
+<section class="page detail">
+  <a routerLink="/app/workouts" class="back">← Back to workouts</a>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (rest.isRunning()) {
+    <div class="rest-banner card" role="status">
+      <div>
+        <p class="eyebrow">Rest</p>
+        <strong>{{ rest.display() }}</strong>
+        @if (rest.activeLabel()) {
+          <p class="muted">{{ rest.activeLabel() }}</p>
+        }
+      </div>
+      <div class="rest-actions row-actions">
+        <button type="button" class="ghost tiny" (click)="rest.addSeconds(15)">+15s</button>
+        <button type="button" class="secondary" (click)="rest.skip()">Skip</button>
+      </div>
+      <div class="rest-bar" [style.--p]="rest.progress()"></div>
+    </div>
+  }
+
+  @if (loading() && !workout()) {
+    <p class="muted">Loading workout…</p>
+  } @else if (workout()) {
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Session</p>
+        <h1>{{ workout()!.name }}</h1>
+        <p class="meta">
+          {{ workout()!.workoutDate | date: 'fullDate' }}
+          · {{ workout()!.durationMinutes || '—' }} min
+          · {{ workout()!.caloriesBurned || '—' }} kcal
+          · {{ statusLabel() }}
+        </p>
+        @if (workout()!.description) {
+          <p class="desc">{{ workout()!.description }}</p>
+        }
+      </div>
+      <div class="hero-actions">
+        @if (session.isActiveFor(workout()!.id)) {
+          <button type="button" class="secondary" (click)="endSession()">End session</button>
+        } @else if (workout()!.status === 'PAUSED' && canResume()) {
+          <button type="button" class="secondary" (click)="startSession()">Resume</button>
+        } @else if (workout()!.status === 'IN_PROGRESS') {
+          <button type="button" class="secondary" (click)="startSession()">Continue timer</button>
+        }
+        @if (canEdit()) {
+          <button type="button" class="primary" (click)="openAddModal()">Add exercise</button>
+        }
+      </div>
+    </header>
+
+    @if (session.isActiveFor(workout()!.id)) {
+      <p class="live-banner">
+        {{ session.active()?.running ? 'Live' : 'Paused' }} · {{ session.display() }}
+        @if (!session.active()?.running && session.canResume()) {
+          <span> · Resume within 1 hour</span>
+        }
+        · Timer stays visible on every screen
+      </p>
+    } @else if (!canEdit()) {
+      <p class="live-banner muted-banner">
+        Completed — editing closed after 5 days from start
+      </p>
+    }
+
+    <section class="card list">
+      <div class="list-head">
+        <h2>Exercises</h2>
+        <span class="muted">Tap Sets to log each set and start rest</span>
+      </div>
+
+      @for (ex of exercises(); track ex.id) {
+        <article class="exercise-block">
+          <div class="exercise-row">
+            <div>
+              <strong>{{ ex.name }}</strong>
+              <p>
+                @if (setsFor(ex.id).length) {
+                  {{ setsFor(ex.id).length }} set{{ setsFor(ex.id).length === 1 ? '' : 's' }}
+                  @if (ex.weightKg != null) {
+                    <span> · {{ ex.weightKg }} kg</span>
+                  }
+                } @else {
+                  No sets yet
+                }
+              </p>
+              @if (previousFor(ex.id); as prev) {
+                @if (prev.found && prev.target) {
+                  <p class="prev-chip">Last · {{ prev.target.label }}</p>
+                }
+              }
+            </div>
+            <div class="row-actions">
+              <button type="button" class="ghost tiny" (click)="addSet(ex)">Add set</button>
+              <button type="button" class="ghost tiny" (click)="toggleSets(ex.id)">
+                {{ expandedExerciseId() === ex.id ? 'Hide sets' : 'Sets' }}
+                @if (setsFor(ex.id).length) {
+                  ({{ setsFor(ex.id).length }})
+                }
+              </button>
+              <button type="button" class="ghost tiny" (click)="openEditModal(ex)">Edit</button>
+              <button type="button" class="ghost tiny" (click)="archiveExercise(ex)">Archive</button>
+              @if (canDeleteExercise(ex)) {
+                <button type="button" class="ghost tiny danger" (click)="removeExercise(ex)">Delete</button>
+              }
+            </div>
+          </div>
+
+          @if (expandedExerciseId() === ex.id) {
+            <div class="sets-panel">
+              @if (previousFor(ex.id); as prev) {
+                @if (prev.found) {
+                  <div class="previous-card">
+                    <div class="previous-block">
+                      <h3>Last workout</h3>
+                      @if (prev.workoutDate) {
+                        <p class="prev-meta">{{ prev.workoutDate | date: 'mediumDate' }}</p>
+                      }
+                      <ul class="prev-sets">
+                        @for (s of prev.sets; track s.setNumber) {
+                          <li>{{ formatPrevSet(s) }}</li>
+                        } @empty {
+                          <li class="muted">No sets logged last time</li>
+                        }
+                      </ul>
+                    </div>
+                    @if (prev.target) {
+                      <div class="previous-block target">
+                        <h3>Target</h3>
+                        <p class="target-line">{{ prev.target.label }}</p>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="prev-empty muted">No previous performance for this lift yet.</p>
+                }
+              }
+
+              <div class="sets-head">
+                <span>Set</span><span>Reps</span><span>kg</span><span>Rest</span><span></span>
+              </div>
+              @for (set of setsFor(ex.id); track set.id) {
+                <div class="set-row" [class.done]="set.completed">
+                  <label class="check">
+                    <input
+                      type="checkbox"
+                      [checked]="set.completed"
+                      (change)="toggleComplete(ex, set)"
+                    />
+                    <span>{{ set.setNumber }}</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    [value]="set.reps ?? ''"
+                    (change)="updateSetField(ex, set, 'reps', $any($event.target).value)"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    [value]="set.weightKg ?? ''"
+                    (change)="updateSetField(ex, set, 'weightKg', $any($event.target).value)"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    [value]="set.restSeconds ?? 90"
+                    (change)="updateSetField(ex, set, 'restSeconds', $any($event.target).value)"
+                    title="Rest seconds"
+                  />
+                  <div class="row-actions">
+                    <button type="button" class="ghost tiny" (click)="startRest(ex, set)">Rest</button>
+                    <button type="button" class="ghost tiny danger" (click)="removeSet(ex, set)">Remove</button>
+                  </div>
+                </div>
+              } @empty {
+                <p class="muted">No sets yet.</p>
+              }
+              <button type="button" class="secondary add-set" (click)="addSet(ex)">Add set</button>
+            </div>
+          }
+        </article>
+      } @empty {
+        <div class="empty">
+          <p class="muted">No exercises yet. Add your first lift for this session.</p>
+          <button type="button" class="primary" (click)="openAddModal()">Add exercise</button>
+        </div>
+      }
+    </section>
+  }
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop" (click)="closeModal()" role="presentation"></div>
+  <div
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="editingExerciseId() ? 'Edit exercise' : 'Add exercise'"
+  >
+    <div class="modal-head">
+      <h2>{{ editingExerciseId() ? 'Edit exercise' : 'Add exercise' }}</h2>
+      <button type="button" class="ghost close" (click)="closeModal()" aria-label="Close">✕</button>
+    </div>
+
+    <form [formGroup]="exerciseForm" (ngSubmit)="submitExercise()">
+      <label>Name <input formControlName="name" placeholder="e.g. Bench press" autofocus /></label>
+      <p class="hint">Add sets after saving — no default set/rep scheme.</p>
+      <label>Notes <input formControlName="notes" placeholder="Tempo, RPE, cues…" /></label>
+      <div class="form-actions">
+        <button type="button" class="secondary" (click)="closeModal()">Cancel</button>
+        <button class="primary" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : editingExerciseId() ? 'Save changes' : 'Add exercise' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

@@ -1,0 +1,76 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # firebase-admin brings io.grpc.Channel onto the classpath, which
+          # activates JsonToGrpc auto-config; disable it (we don't use gRPC routes).
+          filter:
+            json-to-grpc:
+              enabled: false
+
+          default-filters:
+            - RemoveRequestHeader=X-User-Id
+            - RemoveRequestHeader=X-User-Email
+
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 60s
+
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins:
+                  - http://localhost:4200
+                  - http://localhost:8100
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowed-headers:
+                  - "*"
+                allow-credentials: true
+
+workout:
+  security:
+    # Shared with downstream services. Override in prod via GATEWAY_INTERNAL_TOKEN.
+    gateway-token: ${GATEWAY_INTERNAL_TOKEN:local-dev-gateway-token}
+  services:
+    user: ${USER_SERVICE_URL:http://localhost:8081}
+    workout: ${WORKOUT_SERVICE_URL:http://localhost:8082}
+    progress: ${PROGRESS_SERVICE_URL:http://localhost:8083}
+    nutrition: ${NUTRITION_SERVICE_URL:http://localhost:8084}
+    notification: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+          - prometheus
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    com.brijesh.workouttracker.gateway: DEBUG

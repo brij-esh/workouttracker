@@ -1,0 +1,95 @@
+<section class="start-view">
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  <div class="mode-toggle" role="group" aria-label="Start workout type">
+    <button type="button" class="ghost" [class.active]="mode() === 'custom'" (click)="setMode('custom')">
+      Custom workout
+    </button>
+    <button type="button" class="ghost" [class.active]="mode() === 'plan'" (click)="setMode('plan')">
+      From a plan
+    </button>
+  </div>
+
+  @if (mode() === 'custom') {
+    <form class="panel start-card" [formGroup]="form" (ngSubmit)="startCustom(true)">
+      <h2>Custom workout</h2>
+      <p class="hint">Name your session and start — the timer floats on every screen.</p>
+      <label>
+        Name
+        <input formControlName="name" placeholder="e.g. Push day" />
+      </label>
+      <label>Description <textarea formControlName="description" rows="3"></textarea></label>
+      <label>Date <app-date-input formControlName="workoutDate" ariaLabel="Workout date" /></label>
+      <div class="row">
+        <label>Minutes <input type="number" formControlName="durationMinutes" placeholder="Auto from timer" /></label>
+        <label>Calories <input type="number" formControlName="caloriesBurned" placeholder="Auto on end session" /></label>
+      </div>
+      <div class="form-actions">
+        <button class="primary" type="submit" [disabled]="starting()">
+          {{ starting() ? 'Starting…' : 'Start workout' }}
+        </button>
+        <button class="secondary" type="button" (click)="startCustom(false)" [disabled]="starting()">
+          Save without timer
+        </button>
+      </div>
+    </form>
+  } @else {
+    <div class="plan-start">
+      @if (loadingPlans()) {
+        <p class="muted">Loading plans…</p>
+      } @else if (!plans().length) {
+        <div class="panel empty-plans">
+          <div class="empty">
+            <p>No plans yet.</p>
+            <p class="empty-hint">Seed a template or build a custom plan, then start a day from here.</p>
+          </div>
+          <a routerLink="/app/workouts/plans" class="primary link-btn">Go to Plans</a>
+        </div>
+      } @else {
+        <article class="panel plan-picker">
+          <h2>Choose a plan</h2>
+          <div class="plan-list">
+            @for (plan of plans(); track plan.id) {
+              <button
+                type="button"
+                class="plan-option"
+                [class.active]="selectedPlanId() === plan.id"
+                (click)="selectPlan(plan.id)"
+              >
+                <strong>{{ plan.name }}</strong>
+                <span>{{ plan.templateType.replace('_', ' ') }} · {{ plan.days.length }} days</span>
+              </button>
+            }
+          </div>
+        </article>
+
+        @if (selectedPlan(); as plan) {
+          <article class="panel day-picker">
+            <h2>{{ plan.name }} — pick a day</h2>
+            <p class="hint">Starts a live session with that day’s exercises and sets.</p>
+            <div class="day-list">
+              @for (day of planDays(); track day.id) {
+                <div class="day-row">
+                  <div>
+                    <strong>{{ day.dayLabel }}</strong>
+                    <p>{{ day.exercises.length || 0 }} exercises</p>
+                  </div>
+                  <button type="button" class="primary tiny" [disabled]="starting()" (click)="startPlanDay(day)">
+                    Start
+                  </button>
+                </div>
+              } @empty {
+                <div class="empty">
+                  <p>This plan has no days.</p>
+                </div>
+              }
+            </div>
+            <a class="ghost linkish" [routerLink]="['/app/workouts/plans', plan.id]">View plan details</a>
+          </article>
+        }
+      }
+    </div>
+  }
+</section>

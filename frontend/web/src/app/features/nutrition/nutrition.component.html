@@ -1,0 +1,560 @@
+<section class="nutrition-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <h1>Nutrition</h1>
+      <p class="lede">Log foods by meal, track macros, and hit your daily targets.</p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="day-nav" role="group" aria-label="Day navigation">
+      <button type="button" class="ghost nav-btn" (click)="shiftDay(-1)" aria-label="Previous day">
+        <span aria-hidden="true">‹</span>
+      </button>
+      <app-date-input
+        class="day-date"
+        [compact]="true"
+        [ngModel]="listDate()"
+        (ngModelChange)="onListDateChange($event)"
+        [ngModelOptions]="{ standalone: true }"
+        ariaLabel="List date"
+      />
+      <button
+        type="button"
+        class="ghost nav-btn"
+        (click)="shiftDay(1)"
+        [disabled]="isToday()"
+        aria-label="Next day"
+      >
+        <span aria-hidden="true">›</span>
+      </button>
+    </div>
+    @if (!isToday()) {
+      <button type="button" class="ghost today-btn" (click)="goToday()">Today</button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  @if (targets(); as t) {
+    <article class="today-target">
+      <div class="target-head">
+        <div class="target-title">
+          <p class="target-eyebrow">Today's target</p>
+          <label class="goal-pick">
+            <span class="sr-only">Nutrition goal</span>
+            <app-select
+              [ngModel]="t.nutritionGoal"
+              (ngModelChange)="onGoalSelect($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [options]="nutritionGoalOptions"
+              [disabled]="savingTargets()"
+              ariaLabel="Nutrition goal"
+            />
+          </label>
+          <p class="target-meta">
+            @if (t.manualOverride) {
+              Custom macros
+            } @else {
+              Calculated from profile
+            }
+            · {{ trainingDaysPerWeek() }} training day{{ trainingDaysPerWeek() === 1 ? '' : 's' }}/week
+          </p>
+        </div>
+        <div class="target-actions">
+          <button type="button" class="ghost" [disabled]="savingTargets()" (click)="openTargetEditor()">
+            Edit macros
+          </button>
+          <button type="button" class="ghost" [disabled]="savingTargets()" (click)="recalculateFromProfile()">
+            Recalculate
+          </button>
+        </div>
+      </div>
+
+      <div class="target-grid">
+        <div class="target-metric">
+          <span class="tm-label">Calories</span>
+          <span class="tm-value">{{ asNum(t.calorieTarget) | number: '1.0-0' }} <small>kcal</small></span>
+          @if (targetProgress(); as p) {
+            <div class="tm-track" role="progressbar" [attr.aria-valuenow]="p.caloriesPct" aria-valuemin="0" aria-valuemax="100">
+              <div class="tm-fill" [style.width.%]="barWidth(p.caloriesPct)"></div>
+            </div>
+            <span class="tm-logged">{{ dayTotals().calories | number: '1.0-0' }} logged</span>
+          }
+        </div>
+        <div class="target-metric">
+          <span class="tm-label">Protein</span>
+          <span class="tm-value">{{ asNum(t.proteinGTarget) | number: '1.0-0' }} <small>g</small></span>
+          @if (targetProgress(); as p) {
+            <div class="tm-track"><div class="tm-fill" [style.width.%]="barWidth(p.proteinPct)"></div></div>
+            <span class="tm-logged">{{ dayTotals().proteinG | number: '1.0-0' }}g logged</span>
+          }
+        </div>
+        <div class="target-metric">
+          <span class="tm-label">Carbs</span>
+          <span class="tm-value">{{ asNum(t.carbsGTarget) | number: '1.0-0' }} <small>g</small></span>
+          @if (targetProgress(); as p) {
+            <div class="tm-track"><div class="tm-fill" [style.width.%]="barWidth(p.carbsPct)"></div></div>
+            <span class="tm-logged">{{ dayTotals().carbsG | number: '1.0-0' }}g logged</span>
+          }
+        </div>
+        <div class="target-metric">
+          <span class="tm-label">Fat</span>
+          <span class="tm-value">{{ asNum(t.fatGTarget) | number: '1.0-0' }} <small>g</small></span>
+          @if (targetProgress(); as p) {
+            <div class="tm-track"><div class="tm-fill" [style.width.%]="barWidth(p.fatPct)"></div></div>
+            <span class="tm-logged">{{ dayTotals().fatG | number: '1.0-0' }}g logged</span>
+          }
+        </div>
+        <div class="target-metric fiber-metric">
+          <span class="tm-label">Fiber</span>
+          <span class="tm-value">{{ fiberGrams(t) | number: '1.0-0' }} <small>g</small></span>
+          <span class="tm-logged">Daily target</span>
+        </div>
+      </div>
+
+      @if (targetHint()) {
+        <p class="target-hint">{{ targetHint() }}</p>
+      }
+    </article>
+  } @else if (targetHint()) {
+    <p class="target-hint banner">{{ targetHint() }}</p>
+  }
+
+  @if (editingTargets()) {
+    <form class="panel target-editor" [formGroup]="targetForm" (ngSubmit)="saveTargets(true)">
+      <div class="panel-head">
+        <h2>Edit macros</h2>
+        <button type="button" class="ghost tiny" (click)="cancelTargetEditor()">Close</button>
+      </div>
+      <p class="editor-lede">Change the goal to auto-fill macros, or tweak any number yourself.</p>
+      <label>
+        Goal
+        <app-select
+          formControlName="nutritionGoal"
+          [options]="nutritionGoalOptions"
+          ariaLabel="Nutrition goal"
+        />
+      </label>
+      <div class="row macros target-fields">
+        <label>Calories <input type="number" formControlName="calorieTarget" min="800" step="10" /></label>
+        <label>Protein (g) <input type="number" formControlName="proteinGTarget" min="0" step="1" /></label>
+        <label>Carbs (g) <input type="number" formControlName="carbsGTarget" min="0" step="1" /></label>
+        <label>Fat (g) <input type="number" formControlName="fatGTarget" min="0" step="1" /></label>
+        <label>Fiber (g) <input type="number" formControlName="fiberGTarget" min="0" step="1" /></label>
+        <label>Water (ml) <input type="number" formControlName="waterMlTarget" min="500" step="50" /></label>
+      </div>
+      <div class="target-editor-actions">
+        <button type="button" class="ghost" [disabled]="savingTargets()" (click)="recalculateFromProfile()">
+          Recalculate from profile
+        </button>
+        <button class="primary" type="submit" [disabled]="savingTargets()">
+          {{ savingTargets() ? 'Saving…' : 'Save macros' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (dayTotals(); as totals) {
+    <div class="stats">
+      <article class="stat">
+        <span class="stat-value">{{ totals.calories | number: '1.0-0' }}</span>
+        <span class="stat-label">kcal</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ totals.proteinG | number: '1.0-0' }}g</span>
+        <span class="stat-label">Protein</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ totals.carbsG | number: '1.0-0' }}g</span>
+        <span class="stat-label">Carbs</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ totals.fatG | number: '1.0-0' }}g</span>
+        <span class="stat-label">Fat</span>
+      </article>
+    </div>
+
+    <article class="water-summary">
+      <div class="water-copy">
+        <div class="water-head">
+          <h2>Water</h2>
+          <span class="water-amount">
+            {{ totals.waterMl | number: '1.0-0' }} / {{ waterGoalMl() | number: '1.0-0' }} ml
+          </span>
+        </div>
+        <div class="water-track" role="progressbar" [attr.aria-valuenow]="totals.waterPct" aria-valuemin="0" aria-valuemax="100">
+          <div class="water-fill" [style.width.%]="totals.waterPct"></div>
+        </div>
+        <div class="water-meta">
+          <span>{{ totals.waterPct }}% of goal</span>
+          <label class="goal-edit">
+            Goal
+            <input
+              type="number"
+              min="500"
+              max="10000"
+              step="100"
+              [value]="waterGoalMl()"
+              (change)="setWaterGoal($any($event.target).value)"
+            />
+            ml
+          </label>
+        </div>
+        <label class="reminders-toggle">
+          <input
+            type="checkbox"
+            [checked]="waterRemindersOn()"
+            [disabled]="savingTargets() || !targets()"
+            (change)="toggleWaterReminders($any($event.target).checked)"
+          />
+          Water reminders (10am, 2pm, 6pm) when under goal
+        </label>
+      </div>
+      <div class="quick-water">
+        @for (amt of quickWaterAmounts; track amt) {
+          <button type="button" class="ghost" [disabled]="savingWater()" (click)="quickWater(amt)">
+            +{{ amt }} ml
+          </button>
+        }
+      </div>
+    </article>
+  }
+
+  <app-nutrition-insights-panel [weeks]="8" />
+
+  <div class="workspace">
+    <article class="panel meals-panel" [class.collapsed]="!isPanelOpen('foodLog')">
+      <button
+        type="button"
+        class="panel-head panel-toggle"
+        (click)="togglePanel('foodLog')"
+        [attr.aria-expanded]="isPanelOpen('foodLog')"
+      >
+        <span class="panel-title">
+          <span class="chevron" aria-hidden="true">{{ isPanelOpen('foodLog') ? '▾' : '▸' }}</span>
+          <h2>Food log</h2>
+        </span>
+        <span class="count">{{ meals().length }}</span>
+      </button>
+      @if (isPanelOpen('foodLog')) {
+        @if (mealsByType().length) {
+          <div class="meal-groups">
+            @for (group of mealsByType(); track group.type) {
+              <section class="meal-group" [class.collapsed]="!isMealGroupOpen(group.type)">
+                <button
+                  type="button"
+                  class="meal-group-toggle"
+                  (click)="toggleMealGroup(group.type)"
+                  [attr.aria-expanded]="isMealGroupOpen(group.type)"
+                >
+                  <span class="chevron" aria-hidden="true">{{ isMealGroupOpen(group.type) ? '▾' : '▸' }}</span>
+                  <h3>{{ group.label }}</h3>
+                  <span class="count">{{ group.items.length }}</span>
+                </button>
+                @if (isMealGroupOpen(group.type)) {
+                  <ul class="data-list food-list">
+                    @for (m of group.items; track m.id) {
+                      <li>
+                        <div class="row-main food-row">
+                          <div class="meal-title">
+                            <strong>{{ m.name }}</strong>
+                            <span class="qty">{{ formatQuantity(m) }}</span>
+                          </div>
+                          <div class="food-macros">
+                            <div class="macro-cell">
+                              <span class="macro-label">Calories</span>
+                              <span class="macro-value">{{ m.calories | number: '1.0-0' }}</span>
+                            </div>
+                            <div class="macro-cell">
+                              <span class="macro-label">Protein</span>
+                              <span class="macro-value">{{ (m.proteinG ?? 0) | number: '1.0-0' }} g</span>
+                            </div>
+                            <div class="macro-cell">
+                              <span class="macro-label">Carbs</span>
+                              <span class="macro-value">{{ (m.carbsG ?? 0) | number: '1.0-0' }} g</span>
+                            </div>
+                            <div class="macro-cell">
+                              <span class="macro-label">Fat</span>
+                              <span class="macro-value">{{ (m.fatG ?? 0) | number: '1.0-0' }} g</span>
+                            </div>
+                          </div>
+                          @if (m.notes) {
+                            <span class="notes">{{ m.notes }}</span>
+                          }
+                        </div>
+                        <div class="row-actions">
+                          <button type="button" class="ghost tiny danger" (click)="removeMeal(m.id)">Delete</button>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
+            }
+          </div>
+        } @else {
+          <div class="empty">
+            <p>No foods logged.</p>
+            <p class="empty-hint">Add a food on the right{{ isToday() ? '' : ' for this day' }}.</p>
+          </div>
+        }
+      }
+    </article>
+
+    <form
+      class="panel form-panel meal-form"
+      [class.collapsed]="!isPanelOpen('logFood')"
+      [formGroup]="mealForm"
+      (ngSubmit)="saveMeal()"
+    >
+      <button
+        type="button"
+        class="panel-head panel-toggle"
+        (click)="togglePanel('logFood')"
+        [attr.aria-expanded]="isPanelOpen('logFood')"
+      >
+        <span class="panel-title">
+          <span class="chevron" aria-hidden="true">{{ isPanelOpen('logFood') ? '▾' : '▸' }}</span>
+          <h2>Log food</h2>
+        </span>
+      </button>
+      @if (isPanelOpen('logFood')) {
+      <div class="food-picker">
+        <div class="food-picker-head">
+          <h3>Indian food database</h3>
+          <button type="button" class="ghost tiny" (click)="toggleCustomFood()">
+            {{ showCustomFood() ? 'Close custom' : 'Add custom food' }}
+          </button>
+        </div>
+        <label>
+          Search
+          <input
+            type="search"
+            [ngModel]="foodQuery()"
+            (ngModelChange)="onFoodQueryInput($event)"
+            [ngModelOptions]="{ standalone: true }"
+            placeholder="Roti, dal, paneer bhurji…"
+          />
+        </label>
+        <div class="row pair">
+          <label>
+            Category
+            <app-select
+              [ngModel]="foodCategory()"
+              (ngModelChange)="onFoodCategoryChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [options]="foodCategoryOptions"
+              ariaLabel="Food category"
+            />
+          </label>
+          <label>
+            Region
+            <app-select
+              [ngModel]="foodRegion()"
+              (ngModelChange)="onFoodRegionChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [options]="foodRegionOptions"
+              ariaLabel="Food region"
+            />
+          </label>
+        </div>
+        @if (searchingFoods()) {
+          <p class="food-hint">Searching…</p>
+        } @else if (foodResults().length) {
+          <ul class="food-results">
+            @for (food of foodResults(); track food.id) {
+              <li>
+                <button type="button" class="food-pick" (click)="pickFood(food)">
+                  <span class="food-pick-name">
+                    <strong>{{ food.name }}</strong>
+                    <span class="food-tags">
+                      {{ foodCategoryLabel(food.category) }}
+                      · {{ foodRegionLabel(food.region) }}
+                      @if (!food.systemFood) {
+                        · yours
+                      }
+                    </span>
+                  </span>
+                  <span class="food-pick-macros">
+                    {{ food.servingQty | number: '1.0-1' }} {{ quantityLabel(food.servingUnit) }}
+                    · {{ food.calories }} kcal
+                    · P {{ food.proteinG | number: '1.0-0' }}g
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="food-hint">No foods found. Try another search or add a custom food.</p>
+        }
+        @if (selectedFood(); as picked) {
+          <p class="food-selected">
+            Using <strong>{{ picked.name }}</strong> — change quantity to auto-scale macros.
+            <button type="button" class="ghost tiny" (click)="clearSelectedFood()">Clear</button>
+          </p>
+        }
+      </div>
+
+      @if (showCustomFood()) {
+        <div class="custom-food" [formGroup]="customFoodForm">
+          <h3>Add regional / custom food</h3>
+          <label>
+            Name
+            <input formControlName="name" placeholder="e.g. Hyderabadi biryani" />
+          </label>
+          <div class="row pair">
+            <label>
+              Category
+              <app-select formControlName="category" [options]="customCategoryOptions" ariaLabel="Custom category" />
+            </label>
+            <label>
+              Region
+              <app-select formControlName="region" [options]="customRegionOptions" ariaLabel="Custom region" />
+            </label>
+          </div>
+          <div class="row pair">
+            <label>
+              Serving qty
+              <input type="number" formControlName="servingQty" min="0.01" step="0.1" />
+            </label>
+            <label>
+              Unit
+              <app-select formControlName="servingUnit" [options]="quantityUnitOptions" ariaLabel="Custom serving unit" />
+            </label>
+          </div>
+          <label>
+            Calories
+            <input type="number" formControlName="calories" min="0" />
+          </label>
+          <div class="row macros">
+            <label>Protein <input type="number" step="0.1" formControlName="proteinG" min="0" /></label>
+            <label>Carbs <input type="number" step="0.1" formControlName="carbsG" min="0" /></label>
+            <label>Fat <input type="number" step="0.1" formControlName="fatG" min="0" /></label>
+          </div>
+          <button type="button" class="ghost" [disabled]="savingCustomFood()" (click)="saveCustomFood()">
+            {{ savingCustomFood() ? 'Saving…' : 'Save to my foods' }}
+          </button>
+        </div>
+      }
+
+      <div class="row pair">
+        <label>
+          Date
+          <app-date-input formControlName="mealDate" ariaLabel="Meal date" />
+        </label>
+        <label>
+          Meal
+          <app-select formControlName="mealType" [options]="mealTypeOptions" ariaLabel="Meal type" />
+        </label>
+      </div>
+      <label>
+        Food
+        <input formControlName="name" placeholder="e.g. Chicken Breast" />
+        @if (mealForm.controls.name.touched && mealForm.controls.name.invalid) {
+          <span class="field-error">Food name is required</span>
+        }
+      </label>
+      <div class="row pair">
+        <label>
+          Quantity
+          <input type="number" formControlName="quantity" min="0.01" step="0.1" />
+        </label>
+        <label>
+          Unit
+          <app-select formControlName="quantityUnit" [options]="quantityUnitOptions" ariaLabel="Quantity unit" />
+        </label>
+      </div>
+      <label>
+        Calories
+        <input type="number" formControlName="calories" min="0" />
+      </label>
+      <div class="row macros">
+        <label>Protein (g) <input type="number" step="0.1" formControlName="proteinG" min="0" /></label>
+        <label>Carbs (g) <input type="number" step="0.1" formControlName="carbsG" min="0" /></label>
+        <label>Fat (g) <input type="number" step="0.1" formControlName="fatG" min="0" /></label>
+      </div>
+      <label>Notes <input formControlName="notes" /></label>
+      <button class="primary" type="submit" [disabled]="savingMeal()">
+        {{ savingMeal() ? 'Saving…' : 'Save food' }}
+      </button>
+      }
+    </form>
+
+    <article class="panel water-panel" [class.collapsed]="!isPanelOpen('waterLog')">
+      <button
+        type="button"
+        class="panel-head panel-toggle"
+        (click)="togglePanel('waterLog')"
+        [attr.aria-expanded]="isPanelOpen('waterLog')"
+      >
+        <span class="panel-title">
+          <span class="chevron" aria-hidden="true">{{ isPanelOpen('waterLog') ? '▾' : '▸' }}</span>
+          <h2>Water logs</h2>
+        </span>
+        <span class="count">{{ water().length }}</span>
+      </button>
+      @if (isPanelOpen('waterLog')) {
+        @if (water().length) {
+          <ul class="data-list">
+            @for (w of water(); track w.id) {
+              <li>
+                <div class="row-main">
+                  <strong>{{ w.amountMl }} ml</strong>
+                  @if (w.notes) {
+                    <span class="notes">{{ w.notes }}</span>
+                  }
+                </div>
+                <div class="row-actions">
+                  <button type="button" class="ghost tiny danger" (click)="removeWater(w.id)">Delete</button>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="empty">
+            <p>No water logs.</p>
+            <p class="empty-hint">Tap a quick amount or log on the right.</p>
+          </div>
+        }
+      }
+    </article>
+
+    <form
+      class="panel form-panel water-form"
+      [class.collapsed]="!isPanelOpen('logWater')"
+      [formGroup]="waterForm"
+      (ngSubmit)="saveWater()"
+    >
+      <button
+        type="button"
+        class="panel-head panel-toggle"
+        (click)="togglePanel('logWater')"
+        [attr.aria-expanded]="isPanelOpen('logWater')"
+      >
+        <span class="panel-title">
+          <span class="chevron" aria-hidden="true">{{ isPanelOpen('logWater') ? '▾' : '▸' }}</span>
+          <h2>Log water</h2>
+        </span>
+      </button>
+      @if (isPanelOpen('logWater')) {
+        <div class="row pair">
+          <label>
+            Date
+            <app-date-input formControlName="loggedOn" ariaLabel="Water log date" />
+          </label>
+          <label>
+            Amount (ml)
+            <input type="number" formControlName="amountMl" min="1" />
+          </label>
+        </div>
+        <label>Notes <input formControlName="notes" /></label>
+        <button class="primary" type="submit" [disabled]="savingWater()">
+          {{ savingWater() ? 'Saving…' : 'Save water' }}
+        </button>
+      }
+    </form>
+  </div>
+</section>

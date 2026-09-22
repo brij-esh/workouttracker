@@ -1,0 +1,393 @@
+.shell {
+  --rail-width: 240px;
+  --topbar-h: 3.75rem;
+  --bottom-nav-h: 4.35rem;
+  --chrome: color-mix(in srgb, var(--panel) 94%, transparent);
+  height: 100%;
+  max-height: 100%;
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, var(--glow-accent), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, var(--glow-cool), transparent 50%),
+    var(--bg);
+}
+
+:host {
+  display: block;
+  height: 100%;
+  max-height: 100%;
+}
+
+/* Full-width top bar — one continuous bottom edge */
+.topbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: var(--topbar-h);
+  height: var(--topbar-h);
+  padding: 0 1.25rem;
+  padding-top: env(safe-area-inset-top, 0px);
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+}
+
+.brand {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.brand-text {
+  min-width: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.brand-text strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-text .tagline {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.mark {
+  flex-shrink: 0;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--accent);
+  color: #111;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.icon-chip {
+  position: relative;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.7rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.icon-chip:hover,
+.icon-chip.active {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  color: var(--accent);
+}
+
+.icon-chip svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.icon-chip .badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.25rem;
+  min-width: 1.15rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #111;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.avatar {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar .initials {
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* Fixed rail — same size on every route */
+.rail {
+  grid-column: 1;
+  grid-row: 2;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.85rem 1.25rem;
+  border-right: 1px solid var(--line);
+  background: var(--chrome);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.65rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+nav a:hover,
+nav a.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  opacity: 0.9;
+}
+
+nav a.active .nav-icon {
+  opacity: 1;
+}
+
+.nav-label {
+  line-height: 1.2;
+}
+
+.content {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 3vw, 1.75rem);
+}
+
+/* Keep page roots from stretching the shell sideways */
+.content > :first-child {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) and (min-width: 768px) {
+  .shell {
+    --rail-width: 200px;
+  }
+
+  .brand-text .tagline {
+    display: none;
+  }
+
+  nav a {
+    padding: 0.65rem 0.7rem;
+    font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 767px) {
+  :host {
+    height: 100%;
+    max-height: none;
+  }
+
+  .shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: none;
+    overflow: hidden;
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .topbar {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: var(--topbar-h);
+    padding: 0.4rem 0.85rem;
+    padding-top: calc(0.4rem + env(safe-area-inset-top, 0px));
+  }
+
+  .brand-text .tagline {
+    display: none;
+  }
+
+  .rail {
+    position: fixed;
+    z-index: 50;
+    grid-column: auto;
+    grid-row: auto;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    height: auto !important;
+    max-height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    padding: 0.3rem 0.25rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    overflow: hidden;
+    backdrop-filter: blur(14px);
+  }
+
+  nav {
+    flex-direction: row;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.1rem;
+    min-height: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  nav a {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    max-height: 3.6rem;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    min-height: 3.6rem;
+    padding: 0.45rem 0.2rem;
+    border-radius: 0.7rem;
+    font-size: 0;
+  }
+
+  nav a .nav-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  nav a .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  nav a.active {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  nav a.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0.2rem;
+    left: 50%;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: var(--accent);
+    transform: translateX(-50%);
+  }
+
+  .content {
+    grid-column: auto;
+    grid-row: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    padding: 1rem 0.85rem 1.25rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-text strong {
+    font-size: 0.92rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .shell {
+    --rail-width: 260px;
+  }
+}

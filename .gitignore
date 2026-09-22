@@ -1,0 +1,29 @@
+# Local secrets / env
+.env
+.env.*
+!.env.example
+infrastructure/.env
+**/firebase-service-account.json
+**/*-service-account.json
+
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Build
+**/target/
+**/dist/
+**/build/
+backend/docker-dist/
+**/.idea/
+**/*.iml
+**/.classpath
+**/.project
+**/.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

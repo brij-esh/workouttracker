@@ -1,0 +1,14 @@
+<div class="motion" [attr.data-pattern]="pattern()">
+  <div class="motion-copy">
+    <h3>{{ title() }}</h3>
+    <p>{{ cue() }}</p>
+  </div>
+
+  <div class="stage" aria-hidden="true">
+    <div class="photo-loop">
+      <img class="pose start" [src]="startUrl()" [alt]="exerciseName() + ' start position'" loading="lazy" />
+      <img class="pose end" [src]="endUrl()" [alt]="exerciseName() + ' end position'" loading="lazy" />
+    </div>
+    <p class="credit">Real athlete demo · public domain</p>
+  </div>
+</div>

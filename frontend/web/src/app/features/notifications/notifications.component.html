@@ -1,0 +1,81 @@
+<section class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Inbox</p>
+      <h1>Notifications</h1>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="secondary" (click)="markAll()" [disabled]="loading() || !rows().length">
+        Mark all read
+      </button>
+      <button
+        type="button"
+        class="ghost danger"
+        (click)="clearAll()"
+        [disabled]="clearing() || loading() || (!totalElements() && !rows().length)"
+      >
+        {{ clearing() ? 'Clearing...' : 'Clear all' }}
+      </button>
+    </div>
+  </header>
+
+  <nav class="inbox-tabs" aria-label="Notification filters">
+    <button type="button" [class.active]="tab() === 'all'" (click)="setTab('all')">All</button>
+    <button type="button" [class.active]="tab() === 'unread'" (click)="setTab('unread')">Unread</button>
+  </nav>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <div class="card">
+    @if (loading() && rows().length === 0) {
+      <p class="muted">Loading...</p>
+    }
+
+    @for (n of rows(); track n.id) {
+      <article [class.unread]="!n.read">
+        <div class="body">
+          <p class="type">{{ typeLabel(n.type) }}</p>
+          <strong>{{ n.title }}</strong>
+          <p>{{ n.message }}</p>
+          <time class="when">{{ n.createdAt | date: 'medium' }}</time>
+        </div>
+        <div class="row-actions">
+          @if (deepLink(n); as link) {
+            <a class="ghost tiny" [routerLink]="link" (click)="!n.read && markRead(n.id)">Open</a>
+          }
+          @if (!n.read) {
+            <button type="button" class="ghost tiny" (click)="markRead(n.id)">Mark read</button>
+          }
+          <button type="button" class="ghost tiny danger" (click)="clearOne(n)">Clear</button>
+        </div>
+      </article>
+    } @empty {
+      @if (!loading()) {
+        <p class="muted">
+          {{
+            tab() === 'unread'
+              ? 'You’re all caught up — no unread alerts.'
+              : 'No alerts yet. Water reminders, workout updates, and quotes will show up here.'
+          }}
+        </p>
+      }
+    }
+  </div>
+
+  @if (totalElements() > 0) {
+    <div class="pager">
+      <button type="button" class="ghost" [disabled]="!hasPrevious() || loading()" (click)="prevPage()">
+        Previous
+      </button>
+      <span class="muted">
+        Page {{ page() + 1 }} of {{ totalPages() || 1 }}
+        · {{ totalElements() }} total
+      </span>
+      <button type="button" class="ghost" [disabled]="!hasNext() || loading()" (click)="nextPage()">
+        Next
+      </button>
+    </div>
+  }
+</section>

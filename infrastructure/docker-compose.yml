@@ -1,0 +1,313 @@
+x-backend-build: &backend-build
+  context: ../backend
+  dockerfile: Dockerfile
+
+x-jdbc-env: &jdbc-env
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+x-kafka-env: &kafka-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
+
+x-security-env: &security-env
+  GATEWAY_INTERNAL_TOKEN: ${GATEWAY_INTERNAL_TOKEN}
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: workout-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - workout-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: workout-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - workout-network
+
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: workout-kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_PORT}:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # Internal (docker network) + external (host) listeners
+      KAFKA_LISTENERS: PLAINTEXT://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server 127.0.0.1:9092 >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 20s
+      timeout: 15s
+      retries: 15
+      start_period: 60s
+    networks:
+      - workout-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: workout-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_started
+    ports:
+      - "${KAFKA_UI_PORT:-8089}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: workout-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - workout-network
+
+  user-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: user-service
+    image: workout-tracker/user-service:local
+    container_name: workout-user-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      <<: [*jdbc-env, *kafka-env, *security-env]
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - workout-network
+
+  workout-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: workout-service
+    image: workout-tracker/workout-service:local
+    container_name: workout-workout-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      <<: [*jdbc-env, *kafka-env, *security-env]
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/workout_db
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - workout-network
+
+  progress-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: progress-service
+    image: workout-tracker/progress-service:local
+    container_name: workout-progress-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      <<: [*jdbc-env, *kafka-env, *security-env]
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/progress_db
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - workout-network
+
+  nutrition-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: nutrition-service
+    image: workout-tracker/nutrition-service:local
+    container_name: workout-nutrition-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      <<: [*jdbc-env, *kafka-env, *security-env]
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nutrition_db
+    ports:
+      - "8084:8084"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - workout-network
+
+  notification-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: notification-service
+    image: workout-tracker/notification-service:local
+    container_name: workout-notification-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      <<: [*jdbc-env, *kafka-env, *security-env]
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    networks:
+      - workout-network
+
+  api-gateway:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: api-gateway
+    image: workout-tracker/api-gateway:local
+    container_name: workout-api-gateway
+    restart: unless-stopped
+    depends_on:
+      user-service:
+        condition: service_started
+      workout-service:
+        condition: service_started
+      progress-service:
+        condition: service_started
+      nutrition-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    environment:
+      <<: *security-env
+      SERVER_PORT: 8080
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      WORKOUT_SERVICE_URL: ${WORKOUT_SERVICE_URL}
+      PROGRESS_SERVICE_URL: ${PROGRESS_SERVICE_URL}
+      NUTRITION_SERVICE_URL: ${NUTRITION_SERVICE_URL}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL}
+    ports:
+      - "${GATEWAY_PORT}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    networks:
+      - workout-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: workout-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - workout-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: workout-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - workout-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  grafana_data:
+
+networks:
+  workout-network:
+    driver: bridge

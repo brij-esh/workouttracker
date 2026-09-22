@@ -1,0 +1,147 @@
+<section class="history-view">
+  <div class="toolbar">
+    <div class="view-toggle" role="group" aria-label="History view">
+      <button type="button" class="ghost" [class.active]="view() === 'list'" (click)="setView('list')">
+        List
+      </button>
+      <button type="button" class="ghost" [class.active]="view() === 'calendar'" (click)="setView('calendar')">
+        Calendar
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  @if (historyStats(); as stats) {
+    <div class="stats">
+      <article class="stat">
+        <span class="stat-value">{{ stats.total }}</span>
+        <span class="stat-label">Workouts</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ stats.completed }}</span>
+        <span class="stat-label">Completed</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ stats.active }}</span>
+        <span class="stat-label">Active / paused</span>
+      </article>
+      <article class="stat">
+        <span class="stat-value">{{ stats.minutes || '—' }}</span>
+        <span class="stat-label">Total min</span>
+      </article>
+    </div>
+  }
+
+  @if (view() === 'calendar') {
+    <article class="panel">
+      <app-workout-calendar />
+    </article>
+  } @else {
+    <div class="history-layout">
+      @if (editingId()) {
+        <form class="panel form-panel" [formGroup]="form" (ngSubmit)="submit()">
+          <div class="panel-head">
+            <h2>Edit workout</h2>
+            <button type="button" class="ghost tiny" (click)="cancelEdit()">Cancel</button>
+          </div>
+          <label>Name <input formControlName="name" /></label>
+          <label>Description <textarea formControlName="description" rows="3"></textarea></label>
+          <label>Date <app-date-input formControlName="workoutDate" ariaLabel="Workout date" /></label>
+          <div class="row">
+            <label>Minutes <input type="number" formControlName="durationMinutes" /></label>
+            <label>Calories <input type="number" formControlName="caloriesBurned" /></label>
+          </div>
+          <button class="primary" type="submit">Update workout</button>
+        </form>
+      }
+
+      <article class="panel list-panel">
+        <div class="panel-head">
+          <h2>Past workouts</h2>
+          <span class="count">{{ totalElements() }}</span>
+        </div>
+
+        @if (loading() && !rows().length) {
+          <p class="muted">Loading...</p>
+        } @else if (rows().length) {
+          <ul class="data-list">
+            @for (w of rows(); track w.id) {
+              <li
+                class="clickable"
+                (click)="openWorkout(w)"
+                (keydown.enter)="openWorkout(w)"
+                tabindex="0"
+                role="link"
+              >
+                <div class="row-main">
+                  <div class="title-row">
+                    <strong>{{ w.name }}</strong>
+                    <span
+                      class="badge"
+                      [class.live]="statusClass(w) === 'live'"
+                      [class.paused]="statusClass(w) === 'paused'"
+                      [class.done]="statusClass(w) === 'done'"
+                    >
+                      {{ statusLabel(w) }}
+                    </span>
+                  </div>
+                  <span class="meta">
+                    {{ w.workoutDate | date: 'mediumDate' }} ·
+                    {{ w.durationMinutes || '—' }} min ·
+                    {{ w.caloriesBurned || '—' }} kcal
+                  </span>
+                </div>
+                <div class="row-actions" (click)="$event.stopPropagation()">
+                  @if (canShowResume(w)) {
+                    <button type="button" class="ghost tiny" (click)="resumeSession(w, $event)">
+                      Resume
+                    </button>
+                  }
+                  @if (canEditWorkoutRow(w)) {
+                    <button type="button" class="ghost tiny" (click)="edit(w, $event)">Edit</button>
+                  }
+                  <button type="button" class="ghost tiny" (click)="archive(w, $event)">Archive</button>
+                  @if (canDelete(w)) {
+                    <button type="button" class="ghost tiny danger" (click)="remove(w, $event)">
+                      Delete
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+
+          @if (totalElements() > pageSize) {
+            <div class="pager">
+              <button
+                type="button"
+                class="ghost tiny"
+                [disabled]="!hasPrevious() || loading()"
+                (click)="prevPage()"
+              >
+                Previous
+              </button>
+              <span class="muted">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+              <button
+                type="button"
+                class="ghost tiny"
+                [disabled]="!hasNext() || loading()"
+                (click)="nextPage()"
+              >
+                Next
+              </button>
+            </div>
+          }
+        } @else if (!loading()) {
+          <div class="empty">
+            <p>No workouts yet.</p>
+            <p class="empty-hint">Start one from the Start tab.</p>
+          </div>
+        }
+      </article>
+    </div>
+  }
+</section>

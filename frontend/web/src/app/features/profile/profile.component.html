@@ -1,0 +1,300 @@
+<section class="page profile">
+  <header>
+    <div>
+      <p class="eyebrow">Account</p>
+      <h1>{{ isNew() ? 'Finish onboarding' : 'Your profile' }}</h1>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+  @if (saved()) {
+    <p class="ok">Profile saved.</p>
+  }
+
+  <section class="card identity">
+    <div class="photo-block">
+      <div class="photo">
+      @if (auth.photoUrl(); as photo) {
+        <img [src]="photo" [alt]="auth.displayName()" />
+      } @else {
+        <span class="initials" aria-hidden="true">{{ auth.initials() }}</span>
+      }
+      </div>
+      <label class="photo-upload" [class.busy]="photoBusy()">
+        <input
+          type="file"
+          accept="image/*"
+          (change)="onPhotoSelected($event)"
+          [disabled]="photoBusy()"
+        />
+        {{ photoBusy() ? 'Uploading…' : auth.photoUrl() ? 'Change photo' : 'Upload photo' }}
+      </label>
+    </div>
+    <div class="identity-copy">
+      <h2>{{ profile()?.displayName || auth.displayName() }}</h2>
+      @if (profile(); as p) {
+        <dl class="facts">
+          <div>
+            <dt>Goal</dt>
+            <dd>{{ label(p.fitnessGoal, goalLabels) }}</dd>
+          </div>
+          <div>
+            <dt>Activity</dt>
+            <dd>{{ label(p.activityLevel, activityLabels) }}</dd>
+          </div>
+          <div>
+            <dt>Height</dt>
+            <dd>{{ p.heightCm != null ? p.heightCm + ' cm' : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Weight</dt>
+            <dd>{{ p.weightKg != null ? p.weightKg + ' kg' : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Birthday</dt>
+            <dd>{{ p.dateOfBirth ? (p.dateOfBirth | date: 'mediumDate') : '-' }}</dd>
+          </div>
+          <div>
+            <dt>Gender</dt>
+            <dd>{{ label(p.gender, genderLabels) }}</dd>
+          </div>
+          <div>
+            <dt>Units</dt>
+            <dd>{{ label(p.preferredUnits, unitLabels) }}</dd>
+          </div>
+        </dl>
+      } @else if (isNew()) {
+        <p class="muted">Complete the form below to finish setting up your account.</p>
+      }
+    </div>
+  </section>
+
+  <section class="card contact-card">
+    <div class="contact-head">
+      <div>
+        <h2>Email &amp; phone</h2>
+        <p class="muted">Shown on your account. Changes require verification first.</p>
+      </div>
+      <button type="button" class="linkish" (click)="refreshContact()">Refresh</button>
+    </div>
+
+    <div class="contact-row">
+      <div class="contact-meta">
+        <span class="label">Email</span>
+        <strong>{{ auth.email() || profile()?.email || 'Not set' }}</strong>
+        @if (auth.email()) {
+          <span class="badge" [class.ok]="auth.emailVerified()" [class.warn]="!auth.emailVerified()">
+            {{ auth.emailVerified() ? 'Verified' : 'Unverified' }}
+          </span>
+        }
+      </div>
+      @if (!editingEmail()) {
+        <button type="button" class="secondary compact" (click)="startEmailEdit()">
+          {{ auth.email() ? 'Update email' : 'Add email' }}
+        </button>
+      }
+    </div>
+
+    @if (editingEmail()) {
+      <form class="inline-form" [formGroup]="emailForm" (ngSubmit)="submitEmailChange()">
+        <label class="field">
+          <span>New email</span>
+          <input type="email" formControlName="email" autocomplete="email" placeholder="you@email.com" />
+        </label>
+        @if (emailMessage()) {
+          <p class="info">{{ emailMessage() }}</p>
+        }
+        @if (emailError()) {
+          <p class="error tight">{{ emailError() }}</p>
+        }
+        <div class="inline-actions">
+          <button type="button" class="ghost" (click)="cancelEmailEdit()" [disabled]="emailBusy()">
+            Cancel
+          </button>
+          <button type="submit" class="primary compact" [disabled]="emailBusy()">
+            {{ emailBusy() ? 'Sending…' : 'Send verification' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    <div class="contact-row">
+      <div class="contact-meta">
+        <span class="label">Phone</span>
+        <strong>{{ auth.phoneNumber() || 'Not set' }}</strong>
+        @if (auth.phoneNumber()) {
+          <span class="badge ok">Verified</span>
+        }
+      </div>
+      @if (!editingPhone()) {
+        <button type="button" class="secondary compact" (click)="startPhoneEdit()">
+          {{ auth.phoneNumber() ? 'Update phone' : 'Add phone' }}
+        </button>
+      }
+    </div>
+
+    @if (editingPhone()) {
+      @if (phoneStep() === 'phone') {
+        <form class="inline-form" [formGroup]="phoneForm" (ngSubmit)="sendPhoneCode()">
+          <label class="field">
+            <span>New phone number</span>
+            <div class="phone-row">
+              <input class="country" type="text" formControlName="countryCode" placeholder="+91" />
+              <input type="tel" formControlName="phone" inputmode="numeric" placeholder="9876543210" />
+            </div>
+          </label>
+          @if (phoneError()) {
+            <p class="error tight">{{ phoneError() }}</p>
+          }
+          <div class="inline-actions">
+            <button type="button" class="ghost" (click)="cancelPhoneEdit()" [disabled]="phoneBusy()">
+              Cancel
+            </button>
+            <button type="submit" class="primary compact" [disabled]="phoneBusy()">
+              {{ phoneBusy() ? 'Sending…' : 'Send code' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <form
+          class="inline-form"
+          [formGroup]="otpForm"
+          (ngSubmit)="verifyPhoneCode()"
+          autocomplete="one-time-code"
+        >
+          <p class="muted tight">Code sent to {{ otpSentTo() }}</p>
+          <label class="field">
+            <span>Verification code</span>
+            <input
+              type="text"
+              formControlName="code"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              placeholder="6-digit code"
+            />
+          </label>
+          @if (phoneMessage()) {
+            <p class="info">{{ phoneMessage() }}</p>
+          }
+          @if (phoneError()) {
+            <p class="error tight">{{ phoneError() }}</p>
+          }
+          <div class="inline-actions">
+            <button type="button" class="ghost" (click)="cancelPhoneEdit()" [disabled]="phoneBusy()">
+              Cancel
+            </button>
+            <button type="submit" class="primary compact" [disabled]="phoneBusy()">
+              {{ phoneBusy() ? 'Verifying…' : 'Verify & save' }}
+            </button>
+          </div>
+        </form>
+      }
+    }
+
+    <div id="profile-recaptcha"></div>
+  </section>
+
+  <a routerLink="/app/profile/archived" class="card archive-link">
+    <div>
+      <strong>Archived items</strong>
+      <p class="muted">Workouts, exercises, weight logs, and PRs you've archived</p>
+    </div>
+    <span class="chevron" aria-hidden="true"></span>
+  </a>
+
+  <section class="card region-card">
+    <div class="region-copy">
+      <h2>Region &amp; timezone</h2>
+      <p class="muted">
+        Detected from your device:
+        <strong>{{ region.detected().label }}</strong>
+      </p>
+      @if (profile(); as p) {
+        <dl class="facts">
+          <div>
+            <dt>Saved timezone</dt>
+            <dd>{{ p.timezone || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Saved region</dt>
+            <dd>{{ p.region || '-' }}</dd>
+          </div>
+        </dl>
+      }
+    </div>
+    <button type="button" class="secondary" [disabled]="detecting()" (click)="detectRegion()">
+      {{ detecting() ? 'Detecting...' : 'Detect location' }}
+    </button>
+  </section>
+
+  <section class="card theme-card">
+    <div class="theme-copy">
+      <h2>Appearance</h2>
+      <p class="muted">{{ theme.isDark() ? 'Dark theme' : 'Light theme' }} - matches the rest of the app.</p>
+    </div>
+    <button
+      type="button"
+      class="theme-toggle"
+      role="switch"
+      [attr.aria-checked]="theme.isLight()"
+      [attr.aria-label]="theme.isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+      (click)="theme.toggle()"
+    >
+      <span class="theme-option" [class.active]="theme.isDark()">Dark</span>
+      <span class="theme-track" aria-hidden="true">
+        <span class="theme-thumb"></span>
+      </span>
+      <span class="theme-option" [class.active]="theme.isLight()">Light</span>
+    </button>
+  </section>
+
+  <form class="card" [formGroup]="form" (ngSubmit)="save()">
+    <h2>{{ isNew() ? 'Create profile' : 'Edit details' }}</h2>
+    <label>Display name <input formControlName="displayName" /></label>
+    <div class="row">
+      <label>Height (cm) <input type="number" step="0.1" formControlName="heightCm" /></label>
+      <label>Weight (kg) <input type="number" step="0.1" formControlName="weightKg" /></label>
+    </div>
+    <label>Date of birth <app-date-input formControlName="dateOfBirth" ariaLabel="Date of birth" /></label>
+    <div class="row">
+      <label
+        >Gender
+        <app-select formControlName="gender" [options]="genderOptions" ariaLabel="Gender" />
+      </label>
+      <label
+        >Goal
+        <app-select formControlName="fitnessGoal" [options]="goalOptions" ariaLabel="Goal" />
+      </label>
+    </div>
+    <div class="row">
+      <label
+        >Activity
+        <app-select formControlName="activityLevel" [options]="activityOptions" ariaLabel="Activity" />
+      </label>
+      <label
+        >Units
+        <app-select formControlName="preferredUnits" [options]="unitOptions" ariaLabel="Units" />
+      </label>
+    </div>
+    <div class="row">
+      <label>Timezone <input formControlName="timezone" placeholder="e.g. Asia/Kolkata" /></label>
+      <label>Region <input formControlName="region" maxlength="2" placeholder="e.g. IN" /></label>
+    </div>
+    <button class="primary" type="submit">{{ isNew() ? 'Create profile' : 'Update profile' }}</button>
+  </form>
+
+  <div class="logout-wrap">
+    <button type="button" class="secondary logout" (click)="logout()">Log out</button>
+  </div>
+</section>
+
+@if (cropSrc(); as src) {
+  <app-avatar-cropper
+    [imageUrl]="src"
+    (cancel)="cancelCrop()"
+    (confirm)="saveCroppedPhoto($event)"
+  />
+}

@@ -1,0 +1,43 @@
+$apiKey = "AIzaSyB2yveG-2NCetuyXlu-QgLsOGvamVQ15nQ"
+$email = "byadav2751@gmail.com"
+$password = "Brijesh@2751"
+
+$body = @{
+    email             = $email
+    password          = $password
+    returnSecureToken = $true
+} | ConvertTo-Json
+
+$response = Invoke-RestMethod `
+    -Method Post `
+    -Uri "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey" `
+    -ContentType "application/json" `
+    -Body $body
+
+$response.idToken
+
+
+postman vault: f5c6a7f9876b831129cbdd9dd44e5135875f192c9b083938953ac6bb5a77418e
+
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6IjY2MmQ3YTBkNGVlZmQzNDMyNjFjYWRkZmZhZWM2MjNkYzZjYTlmZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vd29ya291dHRyYWNrZXItZDUyNmUiLCJhdWQiOiJ3b3Jrb3V0dHJhY2tlci1kNTI2ZSIsImF1dGhfdGltZSI6MTc4OTgwMjM1OCwidXNlcl9pZCI6IjhDZFRlVU9IQWNlZ01kNkxZVTNKRnhVUDNzRzMiLCJzdWIiOiI4Q2RUZVVPSEFjZWdNZDZMWVUzSkZ4VVAzc0czIiwiaWF0IjoxNzg5ODAyMzU4LCJleHAiOjE3ODk4MDU5NTgsImVtYWlsIjoiYnlhZGF2Mjc1MUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsiYnlhZGF2Mjc1MUBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.ZKYcvUtHKPnn-1VosgRhHZ-E6xp8b18f-GBrasKuFi2UFjPlOT4A27OczDPSY8mAEbc8trPMpxeE8R4sGspuBoF4_OlbOvb8V3GPs8B0o7FSpJm9SjU14OWLwQ8JiBSUI0hbdNPZQBW_Owe28NXpm8sfD1nD08GocE8YgX5-eX4BFzD2eWU5RY1tUPwJDAOY4nhgCUrvCFURxKECBnXCGiqW6z_C4MF4Oa8LLs1dFTHQruyrVbvGzIEcwCaQL2IvREdAenhbcuO6LwWfYqq0gCSGFtC0dfLth3rMpEvorBpv2rzYGDN3WDHyYQMiPdiNsJxNz10qH5wXfLTNK7hY2w
+
+
+
+
+$token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjY2MmQ3YTBkNGVlZmQzNDMyNjFjYWRkZmZhZWM2MjNkYzZjYTlmZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vd29ya291dHRyYWNrZXItZDUyNmUiLCJhdWQiOiJ3b3Jrb3V0dHJhY2tlci1kNTI2ZSIsImF1dGhfdGltZSI6MTc4OTgwMjM1OCwidXNlcl9pZCI6IjhDZFRlVU9IQWNlZ01kNkxZVTNKRnhVUDNzRzMiLCJzdWIiOiI4Q2RUZVVPSEFjZWdNZDZMWVUzSkZ4VVAzc0czIiwiaWF0IjoxNzg5ODAyMzU4LCJleHAiOjE3ODk4MDU5NTgsImVtYWlsIjoiYnlhZGF2Mjc1MUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsiYnlhZGF2Mjc1MUBnbWFpbC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.ZKYcvUtHKPnn-1VosgRhHZ-E6xp8b18f-GBrasKuFi2UFjPlOT4A27OczDPSY8mAEbc8trPMpxeE8R4sGspuBoF4_OlbOvb8V3GPs8B0o7FSpJm9SjU14OWLwQ8JiBSUI0hbdNPZQBW_Owe28NXpm8sfD1nD08GocE8YgX5-eX4BFzD2eWU5RY1tUPwJDAOY4nhgCUrvCFURxKECBnXCGiqW6z_C4MF4Oa8LLs1dFTHQruyrVbvGzIEcwCaQL2IvREdAenhbcuO6LwWfYqq0gCSGFtC0dfLth3rMpEvorBpv2rzYGDN3WDHyYQMiPdiNsJxNz10qH5wXfLTNK7hY2w"
+
+curl.exe -i `
+  -H "Authorization: Bearer $token" `
+  http://localhost:8080/api/v1/workouts
+  
+  
+  
+  
+  
+curl.exe -i `
+  -X POST `
+  -H "Content-Type: application/json" `
+  -H "X-User-Id: byadav2751@gmail" `
+  -d '{\"name\":\"Push Day\",\"description\":\"Chest and triceps\",\"workoutDate\":\"2026-09-17\",\"durationMinutes\":60,\"caloriesBurned\":350}' `
+  http://localhost:8082/api/v1/workouts

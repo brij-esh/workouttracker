@@ -1,0 +1,68 @@
+@if (session.hasSession()) {
+  <aside
+    class="fab-card"
+    [class.live]="session.active()?.running"
+    [class.docked]="session.isMinimized()"
+    (click)="onCardClick($event)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="onCardKey()"
+    (keydown.space)="onCardKey(); $event.preventDefault()"
+    [attr.aria-expanded]="!session.isMinimized()"
+    [attr.aria-label]="
+      session.isMinimized()
+        ? 'Expand workout timer'
+        : 'Workout timer — click to minimize'
+    "
+    aria-live="polite"
+  >
+    @if (session.isMinimized()) {
+      <div class="fab-peek-bar">
+        <span class="fab-peek-dot" aria-hidden="true"></span>
+        <span class="fab-peek-time">{{ session.display() }}</span>
+        <span class="fab-peek-hint">Tap to expand</span>
+      </div>
+    } @else {
+      <div class="fab-body">
+        <div class="fab-main">
+          <button
+            type="button"
+            class="fab-avatar-btn"
+            (click)="openWorkout($event)"
+            [attr.aria-label]="'Open workout ' + (session.active()?.title ?? '')"
+            title="Open workout"
+          >
+            <span class="fab-avatar" aria-hidden="true">{{ brand.shortName }}</span>
+            <span class="fab-pulse" aria-hidden="true"></span>
+          </button>
+
+          <div class="fab-copy">
+            <p class="fab-kicker">
+              {{
+                session.active()?.running
+                  ? 'Live session'
+                  : session.canResume()
+                    ? 'Paused · resume within 1h'
+                    : 'Pause expired'
+              }}
+            </p>
+            <button type="button" class="fab-title" (click)="openWorkout($event)">
+              {{ session.active()?.title }}
+            </button>
+            <p class="fab-clock">{{ session.display() }}</p>
+          </div>
+        </div>
+
+        <div class="fab-actions row-actions">
+          <button type="button" class="ghost tiny" (click)="toggleRun($event)">
+            {{ session.active()?.running ? 'Pause' : session.canResume() ? 'Resume' : 'Expired' }}
+          </button>
+          <button type="button" class="ghost tiny" (click)="openWorkout($event)">Open</button>
+          <button type="button" class="ghost tiny danger" (click)="endSession($event)">
+            End
+          </button>
+        </div>
+      </div>
+    }
+  </aside>
+}

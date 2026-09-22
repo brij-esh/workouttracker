@@ -1,0 +1,231 @@
+.fab-card {
+  --fab-peek: 3rem;
+  --fab-bottom-clearance: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  position: fixed;
+  z-index: 60;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: var(--fab-bottom-clearance);
+  width: min(22rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 1.1rem;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(145deg, var(--glow-accent), transparent 55%),
+    color-mix(in srgb, var(--panel) 94%, var(--bg));
+  box-shadow: 0 16px 40px var(--shadow);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, padding 0.2s ease, border-radius 0.2s ease;
+}
+
+.fab-card.live {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+
+.fab-card.docked {
+  gap: 0;
+  padding: 0.4rem 0.95rem;
+  width: fit-content;
+  max-width: calc(100vw - 2rem);
+  min-height: var(--fab-peek);
+  border-radius: 999px;
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.fab-peek-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: calc(var(--fab-peek) - 0.8rem);
+  user-select: none;
+}
+
+.fab-peek-dot {
+  flex-shrink: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.fab-card.live .fab-peek-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.fab-peek-time {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.fab-peek-hint {
+  margin-left: 0.35rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.fab-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fab-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.fab-avatar-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fab-avatar {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg));
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.fab-pulse {
+  position: absolute;
+  right: 0.1rem;
+  bottom: 0.1rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--muted);
+  border: 2px solid var(--panel);
+}
+
+.fab-card.live .fab-pulse {
+  background: var(--accent);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.fab-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.fab-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.fab-title {
+  display: block;
+  width: 100%;
+  margin: 0.15rem 0 0.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fab-title:hover {
+  color: var(--accent);
+}
+
+.fab-clock {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.fab-actions .compact {
+  min-height: 2.2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.danger-text {
+  color: var(--danger) !important;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
+/* Sit above the mobile bottom nav so docked peek stays tappable */
+@media (max-width: 767px) {
+  .fab-card {
+    --fab-bottom-clearance: calc(4.35rem + 0.55rem + env(safe-area-inset-bottom, 0px));
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+
+  .fab-card.docked {
+    left: auto;
+    right: 0.75rem;
+    width: fit-content;
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-card {
+    transition: none;
+  }
+
+  .fab-card.live .fab-pulse,
+  .fab-card.live .fab-peek-dot {
+    animation: none;
+  }
+}

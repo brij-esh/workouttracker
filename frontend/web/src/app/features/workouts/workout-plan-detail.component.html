@@ -1,0 +1,126 @@
+<section class="page plan-detail">
+  <a routerLink="/app/workouts/plans" class="back">← Back to plans</a>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading plan…</p>
+  } @else if (plan()) {
+    @let p = plan()!;
+
+    <header>
+      <div class="title-block">
+        <p class="eyebrow">{{ p.templateType.replace('_', ' ') }}</p>
+        @if (editingName()) {
+          <form class="name-edit" [formGroup]="nameForm" (ngSubmit)="saveName()">
+            <label>
+              Plan name
+              <input
+                formControlName="name"
+                maxlength="150"
+                placeholder="e.g. Home gym split"
+                autofocus
+              />
+            </label>
+            <div class="name-edit-actions row-actions">
+              <button type="submit" class="primary" [disabled]="savingName() || nameForm.invalid">
+                {{ savingName() ? 'Saving...' : 'Save name' }}
+              </button>
+              <button type="button" class="ghost tiny" (click)="cancelEditName()" [disabled]="savingName()">
+                Cancel
+              </button>
+            </div>
+          </form>
+        } @else {
+          <div class="title-row">
+            <h1>{{ p.name }}</h1>
+            @if (isCustom()) {
+              <button type="button" class="ghost tiny" (click)="startEditName()">Edit name</button>
+            }
+          </div>
+        }
+        @if (p.description) {
+          <p class="meta">{{ p.description }}</p>
+        }
+      </div>
+      <div class="header-actions">
+        @if (todaySlot(); as today) {
+          @if (!today.restDay && today.planDayId) {
+            <button
+              type="button"
+              class="primary"
+              [disabled]="starting()"
+              (click)="startToday()"
+            >
+              Start today · {{ today.dayLabel }}
+            </button>
+          } @else {
+            <span class="rest-chip">Today · Rest</span>
+          }
+        }
+        <button type="button" class="ghost tiny danger" (click)="remove()">Delete plan</button>
+      </div>
+    </header>
+
+    <div class="card week-schedule">
+      <div class="week-head">
+        <h2>Weekly schedule</h2>
+        @if (savingSchedule()) {
+          <span class="muted">Saving…</span>
+        }
+      </div>
+      <p class="hint">Map each weekday to a training day or Rest — reusable every week.</p>
+      <div class="week-grid">
+        @for (slot of p.schedule; track slot.weekday) {
+          <label class="week-slot" [class.today]="slot.weekday === todayWeekday()" [class.rest]="slot.restDay">
+            <span class="dow">{{ dowLabel(slot.weekday) }}</span>
+            <app-select
+              [options]="scheduleOptions(p)"
+              [ngModel]="slot.planDayId ?? 'REST'"
+              [disabled]="savingSchedule()"
+              [ariaLabel]="'Schedule for ' + dowLabel(slot.weekday)"
+              (ngModelChange)="onScheduleChange(slot.weekday, $event)"
+            />
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="days">
+      @for (day of p.days; track day.id) {
+        <article class="card">
+          <div class="day-head">
+            <h2>{{ day.dayLabel }}</h2>
+            <button
+              type="button"
+              class="primary"
+              [disabled]="starting()"
+              (click)="startDay(day.id)"
+            >
+              Start day
+            </button>
+          </div>
+          <ul>
+            @for (ex of day.exercises; track ex.id) {
+              <li>
+                <strong>{{ ex.name }}</strong>
+                <span>
+                  {{ ex.targetSets || '—' }}×{{ ex.targetReps || '—' }}
+                  @if (ex.notes) {
+                    · {{ ex.notes }}
+                  }
+                </span>
+              </li>
+            } @empty {
+              <li class="muted">No exercises on this day yet.</li>
+            }
+          </ul>
+        </article>
+      } @empty {
+        <p class="muted">This plan has no training days.</p>
+      }
+    </div>
+  }
+</section>

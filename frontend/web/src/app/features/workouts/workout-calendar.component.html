@@ -1,0 +1,80 @@
+<div class="calendar-view">
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <div class="stats">
+    <div>
+      <span class="label">This month</span>
+      <strong>{{ calendar()?.workoutCount ?? 0 }}</strong>
+      <span class="unit">workouts</span>
+    </div>
+    <div>
+      <span class="label">Current streak</span>
+      <strong>{{ calendar()?.currentStreak ?? 0 }}</strong>
+      <span class="unit">days</span>
+    </div>
+  </div>
+
+  <div class="month-bar">
+    <button type="button" class="ghost" (click)="prevMonth()" aria-label="Previous month">‹</button>
+    <h2>{{ monthLabel() }}</h2>
+    <button type="button" class="ghost" (click)="nextMonth()" aria-label="Next month">›</button>
+  </div>
+
+  <div class="grid-head" aria-hidden="true">
+    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+  </div>
+
+  <div class="grid" role="grid" [attr.aria-label]="monthLabel()">
+    @for (cell of cells(); track cell.key) {
+      <button
+        type="button"
+        class="cell"
+        [class.empty]="!cell.inMonth"
+        [class.today]="cell.isToday"
+        [class.has-workouts]="cell.workoutCount > 0"
+        [class.future]="cell.isFuture"
+        [class.selected]="selectedDate() === cell.key"
+        [disabled]="!cell.inMonth"
+        (click)="selectDay(cell.key, cell.inMonth)"
+      >
+        @if (cell.day != null) {
+          <span class="num">{{ cell.day }}</span>
+          @if (cell.workoutCount > 0) {
+            <span class="dots" [attr.aria-label]="cell.workoutCount + ' workouts'">
+              @for (_ of dotCount(cell.workoutCount); track _) {
+                <i></i>
+              }
+            </span>
+          }
+        }
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  }
+
+  @if (selectedDay(); as day) {
+    <div class="day-panel card">
+      <h3>{{ day.key | date: 'fullDate' }}</h3>
+      @if (day.workoutCount === 0) {
+        <p class="muted">No workouts on this day.</p>
+        <a routerLink="/app/workouts/start" class="ghost linkish">Start a workout</a>
+      } @else {
+        <ul>
+          @for (w of day.workouts; track w.id) {
+            <li>
+              <button type="button" class="ghost open" (click)="openWorkout(w.id)">
+                <strong>{{ w.name }}</strong>
+                <span>{{ w.durationMinutes || '-' }} min · {{ w.caloriesBurned || '-' }} kcal</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,109 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">{{ brand.shortName }}</span>
+      <div class="brand-text">
+        <strong>{{ brand.name }}</strong>
+        <small class="tagline">{{ brand.tagline }}</small>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a
+        routerLink="/app/notifications"
+        class="icon-chip"
+        aria-label="Notifications"
+        title="Notifications"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Zm-2 1H7v-6a5 5 0 0 1 10 0v6Z"
+          />
+        </svg>
+        @if (badge.count(); as count) {
+          @if (count > 0) {
+            <span class="badge">{{ count > 99 ? '99+' : count }}</span>
+          }
+        }
+      </a>
+
+      <a
+        routerLink="/app/profile"
+        class="avatar"
+        [attr.aria-label]="'Open profile for ' + auth.displayName()"
+        title="Profile"
+      >
+        @if (auth.photoUrl(); as photo) {
+          <img [src]="photo" [alt]="auth.displayName()" />
+        } @else {
+          <span class="initials" aria-hidden="true">{{ auth.initials() }}</span>
+        }
+      </a>
+    </div>
+  </header>
+
+  <aside class="rail" id="app-nav">
+    <nav aria-label="Main">
+      <a
+        routerLink="/app"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Home"
+        title="Home"
+      >
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M12 3.2 3.5 10.5V21h6.2v-6.2h4.6V21h6.2V10.5L12 3.2Zm0 2.5 6.5 5.5V19h-2.6v-6.2H8.1V19H5.5v-7.8L12 5.7Z"
+          />
+        </svg>
+        <span class="nav-label">Home</span>
+      </a>
+      <a routerLink="/app/workouts" routerLinkActive="active" aria-label="Workouts" title="Workouts">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M20.5 9.5h-2.2V7.2h-2.3v2.3h-8V7.2H5.7v2.3H3.5v5h2.2v2.3h2.3v-2.3h8v2.3h2.3v-2.3h2.2v-5ZM7.8 12.2H5.7v-1h2.1v1Zm10.5 0h-2.1v-1h2.1v1Zm-3.2 0H8.9v-1h6.2v1Z"
+          />
+        </svg>
+        <span class="nav-label">Workouts</span>
+      </a>
+      <a routerLink="/app/library" routerLinkActive="active" aria-label="Library" title="Library">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M6 4h2v16H6V4Zm4 0h8.5a1.5 1.5 0 0 1 1.5 1.5V18a2 2 0 0 1-2 2H10V4Zm2 2v12h6a.5.5 0 0 0 .5-.5V6H12Z"
+          />
+        </svg>
+        <span class="nav-label">Library</span>
+      </a>
+      <a routerLink="/app/progress" routerLinkActive="active" aria-label="Progress" title="Progress">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M4 19h16v2H4v-2Zm2.5-3.5 3.2-4.1 2.8 2.2 4.8-6.3 1.6 1.2-6.2 8.2-2.9-2.3-2.1 2.7L5.5 15.5Z"
+          />
+        </svg>
+        <span class="nav-label">Progress</span>
+      </a>
+      <a routerLink="/app/nutrition" routerLinkActive="active" aria-label="Nutrition" title="Nutrition">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M12 2c2.8 0 5 2.6 5 5.8 0 2.2-1.1 4.1-2.7 5.1.9.5 1.7 1.4 1.7 3.1V20h-1.8v-4c0-1.1-.7-1.7-1.7-2.1V20H9.5v-6.1c-1 .4-1.7 1-1.7 2.1V20H6v-4c0-1.7.8-2.6 1.7-3.1C6.1 11.9 5 10 5 7.8 5 4.6 7.2 2 12 2Zm0 1.8c-3.1 0-5.2 1.8-5.2 4 0 1.9 1.1 3.4 2.9 4l.8.3.8-.3c1.8-.6 2.9-2.1 2.9-4 0-2.2-2.1-4-5.2-4Z"
+          />
+        </svg>
+        <span class="nav-label">Nutrition</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>
+
+<app-active-workout-fab />
+<app-confirm-dialog-host />
+<app-toast-host />

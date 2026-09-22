@@ -1,0 +1,69 @@
+<section class="page archived">
+  <a routerLink="/app/profile" class="back">← Back to profile</a>
+
+  <header>
+    <div>
+      <p class="eyebrow">Account</p>
+      <h1>Archived</h1>
+    </div>
+  </header>
+
+  <p class="muted lead">Items older than 5 days can’t be deleted — archive keeps them here.</p>
+
+  <nav class="archive-tabs" aria-label="Archived sections">
+    <button type="button" [class.active]="tab() === 'workouts'" (click)="setTab('workouts')">Workouts</button>
+    <button type="button" [class.active]="tab() === 'exercises'" (click)="setTab('exercises')">Exercises</button>
+    <button type="button" [class.active]="tab() === 'weights'" (click)="setTab('weights')">Weight</button>
+    <button type="button" [class.active]="tab() === 'records'" (click)="setTab('records')">PRs</button>
+  </nav>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <div class="card">
+    @if (loading()) {
+      <p class="muted">Loading…</p>
+    } @else if (tab() === 'workouts') {
+      <h2>Workouts</h2>
+      @for (w of workouts() ?? []; track w.id) {
+        <article>
+          <strong>{{ w.name }}</strong>
+          <p>{{ w.workoutDate | date: 'mediumDate' }} · {{ w.durationMinutes || '—' }} min</p>
+        </article>
+      } @empty {
+        <p class="muted empty">No archived workouts.</p>
+      }
+    } @else if (tab() === 'exercises') {
+      <h2>Exercises</h2>
+      @for (ex of exercises() ?? []; track ex.id) {
+        <article>
+          <strong>{{ ex.name }}</strong>
+          <p>{{ ex.sets || '—' }}×{{ ex.reps || '—' }} · {{ ex.createdAt | date: 'mediumDate' }}</p>
+        </article>
+      } @empty {
+        <p class="muted empty">No archived exercises.</p>
+      }
+    } @else if (tab() === 'weights') {
+      <h2>Weight logs</h2>
+      @for (w of weights() ?? []; track w.id) {
+        <article>
+          <strong>{{ w.weightKg }} kg</strong>
+          <p>{{ w.recordedOn | date: 'mediumDate' }}</p>
+        </article>
+      } @empty {
+        <p class="muted empty">No archived weight logs.</p>
+      }
+    } @else {
+      <h2>Personal records</h2>
+      @for (r of records() ?? []; track r.id) {
+        <article>
+          <strong>{{ r.exerciseName }}</strong>
+          <p>{{ r.value }} · {{ r.recordType }} · {{ r.recordedOn | date: 'mediumDate' }}</p>
+        </article>
+      } @empty {
+        <p class="muted empty">No archived PRs.</p>
+      }
+    }
+  </div>
+</section>

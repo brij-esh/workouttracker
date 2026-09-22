@@ -1,0 +1,40 @@
+<section class="auth">
+  <div class="stage" aria-hidden="true">
+    <div class="stage-media"></div>
+    <div class="stage-wash"></div>
+  </div>
+
+  <div class="layout single">
+    <header class="brand-block">
+      <p class="brand">{{ brand.name }}</p>
+      <h1>Verify your email</h1>
+      <p class="lede">
+        Your account is locked until we confirm
+        <strong>{{ email() || 'your email' }}</strong>. Open the link we sent, then continue.
+      </p>
+    </header>
+
+    <div class="panel">
+      <p class="locked-badge">Account locked</p>
+
+      @if (message()) {
+        <p class="info" role="status">{{ message() }}</p>
+      }
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <button type="button" class="primary submit" (click)="checkVerified()" [disabled]="busy()">
+        {{ busy() ? 'Checking…' : 'I’ve verified — continue' }}
+      </button>
+
+      <button type="button" class="secondary" (click)="resend()" [disabled]="busy()">
+        Resend verification email
+      </button>
+
+      <button type="button" class="linkish" (click)="logout()" [disabled]="busy()">
+        Sign out
+      </button>
+    </div>
+  </div>
+</section>

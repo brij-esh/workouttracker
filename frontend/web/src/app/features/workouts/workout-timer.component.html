@@ -1,0 +1,28 @@
+<section class="timer" [class.live]="running()">
+  <div class="timer-top">
+    <div>
+      <p class="eyebrow">Session timer</p>
+      <p class="hint">{{ running() ? 'Recording…' : elapsedMs() > 0 ? 'Paused' : 'Ready when you are' }}</p>
+    </div>
+    <span class="pulse" aria-hidden="true"></span>
+  </div>
+
+  <p class="clock" aria-live="polite">{{ display() }}</p>
+
+  <div class="controls">
+    <button type="button" class="primary" (click)="toggle()">
+      {{ running() ? 'Pause' : elapsedMs() > 0 ? 'Resume' : 'Start' }}
+    </button>
+    <button type="button" class="secondary" (click)="reset()" [disabled]="elapsedMs() === 0 && !running()">
+      Reset
+    </button>
+    <button
+      type="button"
+      class="secondary"
+      (click)="useForLog()"
+      [disabled]="elapsedMs() === 0"
+    >
+      Use {{ minutesRounded() || 0 }} min
+    </button>
+  </div>
+</section>

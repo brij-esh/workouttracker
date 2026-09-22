@@ -1,0 +1,12 @@
+<button
+  type="button"
+  class="trigger"
+  [class.open]="open()"
+  [disabled]="isDisabled()"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="ariaLabel()"
+  (click)="toggle($event)"
+>
+  <span class="value" [class.placeholder]="showingPlaceholder()">{{ selectedLabel() }}</span>
+  <span class="chevron" aria-hidden="true"></span>
+</button>

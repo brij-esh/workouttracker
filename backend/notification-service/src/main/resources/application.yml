@@ -1,0 +1,60 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: notification-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.brijesh.workouttracker.events
+        spring.json.use.type.headers: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+
+logging:
+  level:
+    com.brijesh.workouttracker.notification: DEBUG
+    org.hibernate.SQL: INFO
+
+workout:
+  security:
+    gateway-token: ${GATEWAY_INTERNAL_TOKEN:local-dev-gateway-token}
+    require-gateway-token: true
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+  quotes:
+    daily-enabled: ${QUOTE_DAILY_ENABLED:true}
+    zone: ${QUOTE_ZONE:Asia/Kolkata}
+    cron: ${QUOTE_CRON:0 0 6 * * *}

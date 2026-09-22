@@ -1,0 +1,109 @@
+<section class="consistency">
+  <div class="month-nav" role="group" aria-label="Consistency month">
+    <button type="button" class="ghost" (click)="shiftMonth(-1)" aria-label="Previous month">‹</button>
+    <span class="month-label">{{ data()?.monthLabel || month() }}</span>
+    <button type="button" class="ghost" (click)="shiftMonth(1)" aria-label="Next month">›</button>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (loading() && !data()) {
+    <p class="muted">Loading consistency...</p>
+  }
+
+  @if (data(); as c) {
+    <div class="summary-strip">
+      <div class="summary-main">
+        <span class="pct">{{ c.consistencyPercent }}%</span>
+        <span class="pct-label">consistency</span>
+      </div>
+      <div class="summary-pair">
+        <span class="k">Completed</span>
+        <span class="v">{{ c.completed }}</span>
+      </div>
+      <div class="summary-pair">
+        <span class="k">Planned</span>
+        <span class="v">{{ c.planned }}</span>
+      </div>
+      <div class="summary-pair">
+        <span class="k">Missed</span>
+        <span class="v warn">{{ c.missed }}</span>
+      </div>
+    </div>
+
+    <p class="plan-line muted">
+      @if (c.planName) {
+        Tracking against plan: <strong>{{ c.planName }}</strong>
+      } @else {
+        No active plan linked - planned days stay at 0 until you set a schedule.
+      }
+    </p>
+
+    <div class="metrics">
+      <article>
+        <span class="k">This week</span>
+        <strong>{{ c.workoutsThisWeek }}</strong>
+      </article>
+      <article>
+        <span class="k">This month</span>
+        <strong>{{ c.workoutsThisMonth }}</strong>
+      </article>
+      <article>
+        <span class="k">Streak</span>
+        <strong>{{ c.currentStreak }} <small>days</small></strong>
+      </article>
+      <article>
+        <span class="k">Avg / week</span>
+        <strong>{{ c.averageWorkoutsPerWeek }}</strong>
+      </article>
+      <article>
+        <span class="k">Frequency</span>
+        <strong>{{ c.trainingFrequency }} <small>/wk</small></strong>
+      </article>
+      <article>
+        <span class="k">Missed</span>
+        <strong>{{ c.missed }}</strong>
+      </article>
+    </div>
+
+    <article class="heatmap-card">
+      <div class="heatmap-head">
+        <h3>Training heatmap</h3>
+        <span class="muted">Last 12 weeks</span>
+      </div>
+
+      <div class="heatmap" role="img" [attr.aria-label]="'Workout heatmap for ' + c.monthLabel">
+        @for (row of c.heatmap; track row.weekday) {
+          <div class="heat-row">
+            <span class="heat-label">{{ row.weekday }}</span>
+            <div class="heat-cells">
+              @for (cell of row.cells; track cell.date) {
+                <span
+                  class="heat-cell"
+                  [attr.data-level]="cell.level"
+                  [class.missed]="cell.missed"
+                  [title]="cellTitle(cell)"
+                >
+                  <span class="heat-date">{{ cellDateLabel(cell.date) }}</span>
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="heat-legend" aria-hidden="true">
+        <span>Less</span>
+        <span class="heat-cell" data-level="0"></span>
+        <span class="heat-cell" data-level="1"></span>
+        <span class="heat-cell" data-level="2"></span>
+        <span class="heat-cell" data-level="3"></span>
+        <span class="heat-cell" data-level="4"></span>
+        <span>More</span>
+        <span class="missed-key">Missed planned day</span>
+      </div>
+    </article>
+  }
+</section>

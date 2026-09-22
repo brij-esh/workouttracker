@@ -1,0 +1,76 @@
+<div class="plans-view">
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  <article class="panel templates">
+    <h2>Start from a template</h2>
+    <p class="hint">
+      Seed a reusable program with a Mon–Sun calendar. Pick a split that matches your schedule.
+    </p>
+    <div class="template-grid">
+      @for (tpl of templates; track tpl.type) {
+        <button
+          type="button"
+          class="template-card"
+          [disabled]="seeding()"
+          (click)="seed(tpl.type)"
+        >
+          <strong>{{ tpl.name }}</strong>
+          <span class="meta">{{ tpl.meta }}</span>
+          <span class="desc">{{ tpl.description }}</span>
+        </button>
+      }
+      <button type="button" class="template-card custom" [disabled]="seeding()" (click)="createCustom()">
+        <strong>Blank custom</strong>
+        <span class="meta">Your split</span>
+        <span class="desc">Start empty and build days yourself.</span>
+      </button>
+    </div>
+  </article>
+
+  <article class="panel list-panel">
+    <div class="panel-head">
+      <h2>Your plans</h2>
+      <span class="count">{{ plans().length }}</span>
+    </div>
+
+    @if (plans().length) {
+      <ul class="data-list">
+        @for (plan of plans(); track plan.id) {
+          <li>
+            <a class="plan-main" [routerLink]="['/app/workouts/plans', plan.id]">
+              <strong>{{ plan.name }}</strong>
+              <span class="meta">{{ plan.templateType.replace('_', ' ') }} · {{ dayCount(plan) }} days</span>
+              @if (plan.description) {
+                <span class="desc">{{ plan.description }}</span>
+              }
+              @if (plan.schedule?.length) {
+                <span class="week-line">{{ weekSummary(plan) }}</span>
+              }
+            </a>
+            <div class="row-actions">
+              @if (todayTrainingDay(plan); as day) {
+                <button type="button" class="primary tiny" (click)="startDay(plan, day.id, $event)">
+                  Start today · {{ day.dayLabel }}
+                </button>
+              }
+              @for (day of plan.days; track day.id) {
+                <button type="button" class="ghost tiny" (click)="startDay(plan, day.id, $event)">
+                  Start {{ day.dayLabel }}
+                </button>
+              }
+              <button type="button" class="ghost tiny" (click)="archive(plan, $event)">Archive</button>
+              <button type="button" class="ghost tiny danger" (click)="remove(plan, $event)">Delete</button>
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="empty">
+        <p>No plans yet.</p>
+        <p class="empty-hint">Pick a template above to get started.</p>
+      </div>
+    }
+  </article>
+</div>

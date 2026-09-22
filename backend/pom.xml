@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+            http://maven.apache.org/POM/4.0.0
+            https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- =========================================================
+         Spring Boot Parent
+         ========================================================= -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.6</version>
+        <relativePath/>
+    </parent>
+
+    <!-- =========================================================
+         Project Coordinates
+         ========================================================= -->
+    <groupId>com.brijesh.workouttracker</groupId>
+    <artifactId>workout-tracker-backend</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <packaging>pom</packaging>
+
+    <name>Workout Tracker Backend</name>
+    <description>
+        Production-ready microservices backend for Workout Tracker
+    </description>
+
+    <!-- =========================================================
+         Maven Modules
+         ========================================================= -->
+    <modules>
+        <module>api-gateway</module>
+        <module>user-service</module>
+        <module>workout-service</module>
+        <module>progress-service</module>
+        <module>nutrition-service</module>
+        <module>notification-service</module>
+        <module>common-security</module>
+        <module>common-events</module>
+    </modules>
+
+    <!-- =========================================================
+         Project Properties
+         ========================================================= -->
+    <properties>
+        <!-- Java -->
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+
+        <!-- Encoding -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Spring Cloud -->
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
+
+        <!-- Libraries -->
+        <firebase-admin.version>9.4.3</firebase-admin.version>
+        <jjwt.version>0.12.6</jjwt.version>
+        <testcontainers.version>1.20.6</testcontainers.version>
+        <springdoc.version>2.8.13</springdoc.version>
+        <jacoco.version>0.8.13</jacoco.version>
+    </properties>
+
+    <!-- =========================================================
+         Dependency Management
+         ========================================================= -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- Spring Cloud BOM -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Shared security module -->
+            <dependency>
+                <groupId>com.brijesh.workouttracker</groupId>
+                <artifactId>common-security</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Shared Kafka events -->
+            <dependency>
+                <groupId>com.brijesh.workouttracker</groupId>
+                <artifactId>common-events</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Firebase Admin -->
+            <dependency>
+                <groupId>com.google.firebase</groupId>
+                <artifactId>firebase-admin</artifactId>
+                <version>${firebase-admin.version}</version>
+            </dependency>
+
+            <!-- JWT -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+
+            <!-- Testcontainers BOM -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- =========================================================
+         Common Dependencies
+         ========================================================= -->
+    <dependencies>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Configuration Metadata (version from spring-boot-starter-parent) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- =========================================================
+         Build Configuration
+         ========================================================= -->
+    <build>
+
+        <pluginManagement>
+            <plugins>
+
+                <!-- Spring Boot Maven Plugin -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <layers>
+                            <enabled>true</enabled>
+                        </layers>
+                    </configuration>
+                </plugin>
+
+                <!-- Maven Compiler Plugin -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>${java.version}</release>
+                        <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </path>
+                            <path>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-configuration-processor</artifactId>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+
+                <!-- Surefire -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                </plugin>
+
+                <!-- JaCoCo -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+
+                        <execution>
+                            <id>report</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+
+                    </executions>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+
+        <!-- Plugins inherited by child modules -->
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
+
+        </plugins>
+
+    </build>
+
+</project>

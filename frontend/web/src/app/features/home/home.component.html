@@ -1,0 +1,284 @@
+<section class="page home">
+  <header class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">{{ today | date: 'fullDate' }}</p>
+      <h1>{{ greeting() }}, {{ displayName() }}</h1>
+      <p class="lede">{{ focusLine() }}</p>
+    </div>
+    <div class="hero-actions">
+      <a routerLink="/app/workouts" class="primary">Start workout</a>
+      <a routerLink="/app/nutrition" class="secondary">Log meal</a>
+    </div>
+  </header>
+
+  <aside class="quote-banner" aria-label="Motivational quote">
+    @if (quoteLoading()) {
+      <p class="quote-loading muted">Finding today’s spark…</p>
+    } @else if (quote()) {
+      @let q = quote()!;
+      <blockquote>
+        <p class="quote-text">“{{ q.text }}”</p>
+        <footer class="quote-author">— {{ q.author }}</footer>
+      </blockquote>
+    }
+  </aside>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted loading">Pulling your training snapshot…</p>
+  } @else {
+    <section class="stats" aria-label="Weekly snapshot">
+      <div class="stat">
+        <span class="stat-value">{{ weekWorkouts().length }}</span>
+        <span class="stat-label">Sessions this week</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ weekMinutes() }}</span>
+        <span class="stat-label">Minutes trained</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ weekCalories() }}</span>
+        <span class="stat-label">Calories burned</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ streakDays() }}</span>
+        <span class="stat-label">Day streak</span>
+      </div>
+    </section>
+
+    <section class="achievements" aria-label="Achievements and habit tier">
+      @if (achievements(); as board) {
+        <article class="tier-card">
+          <div class="tier-copy">
+            <p class="tier-kicker">Habit tier</p>
+            <h2>{{ board.tier.label }}</h2>
+            <p class="muted">{{ board.tier.blurb }}</p>
+            <p class="tier-meta">
+              {{ board.tier.unlockedCount }} / {{ board.tier.totalAchievements }} achievements
+              @if (board.tier.nextLabel) {
+                · next: {{ board.tier.nextLabel }}
+              }
+            </p>
+          </div>
+          <ol class="tier-ladder" aria-label="Habit tier ladder">
+            @for (step of ['Beginner', 'Consistent', 'Dedicated', 'Advanced', 'Elite']; track step) {
+              <li [class.active]="step === board.tier.label" [class.reached]="isTierReached(step, board.tier.label)">
+                {{ step }}
+              </li>
+            }
+          </ol>
+          <div class="tier-progress" aria-hidden="true">
+            <div class="tier-progress-fill" [style.width.%]="board.tier.progressToNextPct"></div>
+          </div>
+        </article>
+
+        <div class="achieve-grid">
+          @for (a of board.achievements; track a.id) {
+            <article class="achieve-card" [class.unlocked]="a.unlocked">
+              <span class="achieve-mark" aria-hidden="true">{{ a.mark }}</span>
+              <div class="achieve-copy">
+                <strong>{{ a.title }}</strong>
+                <span class="muted">{{ a.description }}</span>
+                <span class="achieve-progress">
+                  @if (a.unlocked) {
+                    Unlocked
+                  } @else {
+                    {{ a.current }} / {{ a.target }}
+                  }
+                </span>
+              </div>
+              <div class="achieve-bar" aria-hidden="true">
+                <div class="achieve-bar-fill" [style.width.%]="a.progressPct"></div>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="actions" aria-label="Quick actions">
+      <a routerLink="/app/workouts" class="action">
+        <span class="action-kicker">Train</span>
+        <strong>Start workout</strong>
+        <span>Live timer floats on every screen.</span>
+      </a>
+      <a routerLink="/app/progress" class="action">
+        <span class="action-kicker">Body</span>
+        <strong>Log weight or PR</strong>
+        <span>Track the trend, not the noise.</span>
+      </a>
+      <a routerLink="/app/nutrition" class="action">
+        <span class="action-kicker">Fuel</span>
+        <strong>Add a meal</strong>
+        <span>Protein, carbs, and water.</span>
+      </a>
+      <a routerLink="/app/notifications" class="action">
+        <span class="action-kicker">Inbox</span>
+        <strong>Check alerts</strong>
+        <span>{{ unreadCount() }} unread right now</span>
+      </a>
+    </section>
+
+    <div class="panels">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Recent sessions</h2>
+          <a routerLink="/app/workouts" class="text-link">All workouts</a>
+        </div>
+        @if (recentWorkouts().length === 0) {
+          <div class="empty">
+            <p>No sessions yet. Your first log unlocks the weekly stats above.</p>
+            <a routerLink="/app/workouts" class="primary">Log your first workout</a>
+          </div>
+        } @else {
+          <ul class="feed">
+            @for (w of recentWorkouts(); track w.id) {
+              <li>
+                <div>
+                  <strong>{{ w.name }}</strong>
+                  <span>{{ w.workoutDate | date: 'mediumDate' }}</span>
+                </div>
+                <div class="meta">
+                  <span>{{ w.durationMinutes || '—' }} min</span>
+                  <span>{{ w.caloriesBurned || '—' }} kcal</span>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Today’s fuel</h2>
+          <a routerLink="/app/nutrition" class="text-link">Open nutrition</a>
+        </div>
+        <div class="fuel-strip">
+          <div>
+            <strong>{{ todayCalories() }}</strong>
+            <span>kcal logged</span>
+          </div>
+          <div>
+            <strong>{{ todayWaterMl() }}</strong>
+            <span>ml water</span>
+          </div>
+          <div>
+            <strong>{{ meals().length }}</strong>
+            <span>meals</span>
+          </div>
+        </div>
+        @if (meals().length === 0) {
+          <p class="muted">No meals logged today — add breakfast or a snack.</p>
+        } @else {
+          <ul class="feed compact">
+            @for (m of meals().slice(0, 4); track m.id) {
+              <li>
+                <div>
+                  <strong>{{ m.name }}</strong>
+                  <span>{{ m.mealType }}</span>
+                </div>
+                <div class="meta">
+                  <span>{{ m.calories }} kcal</span>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </article>
+    </div>
+
+    <div class="panels">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Progress pulse</h2>
+          <a routerLink="/app/progress" class="text-link">Update</a>
+        </div>
+        <div class="fuel-strip">
+          <div>
+            <strong>{{ latestWeight()?.weightKg ?? '—' }}</strong>
+            <span>latest kg</span>
+          </div>
+          <div>
+            <strong>{{ latestPr()?.value ?? '—' }}</strong>
+            <span>latest PR</span>
+          </div>
+          <div>
+            <strong>{{ streakDays() }}</strong>
+            <span>day streak</span>
+          </div>
+        </div>
+        <ul class="feed">
+          <li>
+            <div>
+              <strong>Goal</strong>
+              <span>{{ goalLabel(profile()?.fitnessGoal) }}</span>
+            </div>
+            <a routerLink="/app/profile" class="text-link">Edit</a>
+          </li>
+          @if (latestPr(); as pr) {
+            <li>
+              <div>
+                <strong>{{ pr.exerciseName }}</strong>
+                <span>{{ pr.recordedOn | date: 'mediumDate' }}</span>
+              </div>
+              <div class="meta">
+                <span>{{ pr.value }}</span>
+              </div>
+            </li>
+          } @else {
+            <li>
+              <div>
+                <strong>No PR yet</strong>
+                <span>Log a personal record to track peaks.</span>
+              </div>
+            </li>
+          }
+          @if (latestWeight(); as weight) {
+            <li>
+              <div>
+                <strong>Weight</strong>
+                <span>{{ weight.recordedOn | date: 'mediumDate' }}</span>
+              </div>
+              <div class="meta">
+                <span>{{ weight.weightKg }} kg</span>
+              </div>
+            </li>
+          }
+        </ul>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Alerts</h2>
+          <a routerLink="/app/notifications" class="text-link">View all</a>
+        </div>
+        @if (recentNotes().length === 0) {
+          <div class="empty">
+            <p>You're caught up. New workout events will land here.</p>
+            <a routerLink="/app/notifications" class="secondary">Open inbox</a>
+          </div>
+        } @else {
+          <ul class="feed">
+            @for (n of recentNotes(); track n.id) {
+              <li>
+                <div>
+                  <strong>{{ n.title }}</strong>
+                  <span>{{ n.message }}</span>
+                </div>
+                <div class="feed-actions">
+                  @if (!n.read) {
+                    <button type="button" class="ghost tiny" (click)="markRead(n.id)">Mark read</button>
+                  }
+                  <button type="button" class="ghost tiny danger" (click)="clearAlert(n.id)">Clear</button>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </article>
+    </div>
+  }
+</section>

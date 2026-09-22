@@ -1,0 +1,72 @@
+<section class="library-detail">
+  <a routerLink="/app/library" class="back">← Back to library</a>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (exercise()) {
+    @let ex = exercise()!;
+
+    <header class="page-hero">
+      <div class="hero-copy">
+        <p class="eyebrow">{{ ex.custom ? 'Custom exercise' : 'Exercise library' }}</p>
+        <h1>{{ ex.name }}</h1>
+        <p class="lede">
+          {{ label(ex.muscleGroup) }}
+          @if (ex.equipment) {
+            · {{ label(ex.equipment) }}
+          }
+          @if (ex.difficulty) {
+            · {{ label(ex.difficulty) }}
+          }
+        </p>
+      </div>
+    </header>
+
+    <section class="facts">
+      <article class="stat">
+        <span class="stat-label">Muscle group</span>
+        <span class="stat-value sm">{{ label(ex.muscleGroup) }}</span>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Equipment</span>
+        <span class="stat-value sm">{{ label(ex.equipment) }}</span>
+      </article>
+      <article class="stat">
+        <span class="stat-label">Difficulty</span>
+        <span class="stat-value sm">{{ label(ex.difficulty) }}</span>
+      </article>
+    </section>
+
+    <div class="workspace">
+      <article class="panel map-panel">
+        <app-muscle-map [muscleGroup]="ex.muscleGroup" [label]="label(ex.muscleGroup)" />
+      </article>
+
+      <div class="side-stack">
+        <article class="panel">
+          <app-exercise-motion [exerciseName]="ex.name" />
+        </article>
+
+        <article class="panel instructions">
+          <h2>How to do it</h2>
+          @if (instructionSteps().length) {
+            <ol>
+              @for (step of instructionSteps(); track $index) {
+                <li [style.--i]="$index">{{ step }}</li>
+              }
+            </ol>
+          } @else {
+            <div class="empty">
+              <p>No written instructions yet.</p>
+              <p class="empty-hint">Use the muscle map and motion cue as a starting guide.</p>
+            </div>
+          }
+        </article>
+      </div>
+    </div>
+  }
+</section>

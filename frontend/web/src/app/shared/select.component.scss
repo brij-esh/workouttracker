@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--touch);
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--input-bg-hover);
+}
+
+.trigger.open,
+.trigger:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.value.placeholder {
+  color: var(--muted);
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-0.12rem);
+  transition: transform 0.15s ease;
+}
+
+.trigger.open .chevron {
+  transform: rotate(225deg) translateY(-0.05rem);
+}

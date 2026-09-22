@@ -1,0 +1,77 @@
+.archived {
+  width: min(720px, 100%);
+  max-width: 720px;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--page-gap);
+}
+
+.back {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.back:hover {
+  color: var(--accent);
+}
+
+.lead {
+  margin: -0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+.archive-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--line);
+}
+
+.archive-tabs button {
+  flex: 1 1 auto;
+  min-width: 4.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.archive-tabs button.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.card {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.card h2 {
+  margin: 0 0 0.15rem;
+}
+
+article {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+article:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+article p,
+.empty {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}

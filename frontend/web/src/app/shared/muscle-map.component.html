@@ -1,0 +1,48 @@
+<div class="muscle-map">
+  <div class="map-head">
+    <div>
+      <h3>Muscle focus</h3>
+      @if (label()) {
+        <p class="sub">{{ label() }}</p>
+      }
+    </div>
+    <div class="view-toggle" role="group" aria-label="Body view">
+      <button type="button" class="ghost" [class.active]="activeView() === 'front'" (click)="setView('front')">
+        Front
+      </button>
+      <button type="button" class="ghost" [class.active]="activeView() === 'back'" (click)="setView('back')">
+        Back
+      </button>
+    </div>
+  </div>
+
+  <div class="figure-wrap" [attr.data-view]="activeView()">
+    <div class="figure" role="img" [attr.aria-label]="'Muscle map highlighting ' + (label() || muscleGroup())">
+      <img class="body-photo" [src]="bodySrc()" alt="" width="320" height="480" />
+      <svg class="muscle-overlay" [attr.viewBox]="viewBox()" aria-hidden="true">
+        <path class="outline" [attr.d]="outlinePath()" />
+        @for (m of muscles(); track m.id) {
+          <path
+            class="muscle"
+            [class.primary]="highlightClass(m.group) === 'primary'"
+            [class.secondary]="highlightClass(m.group) === 'secondary'"
+            [attr.d]="m.d"
+          />
+        }
+      </svg>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-row">
+      <span class="swatch primary"></span>
+      <span>Primary · {{ legendPrimary().join(', ') || '—' }}</span>
+    </div>
+    @if (legendSecondary().length) {
+      <div class="legend-row">
+        <span class="swatch secondary"></span>
+        <span>Secondary · {{ legendSecondary().join(', ') }}</span>
+      </div>
+    }
+  </div>
+</div>

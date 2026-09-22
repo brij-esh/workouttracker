@@ -1,0 +1,144 @@
+<section class="library-page">
+  <header class="page-hero">
+    <div class="hero-copy">
+      <h1>Exercise Library</h1>
+      <p class="lede">Browse system moves or add your own custom exercises.</p>
+    </div>
+    <button type="button" class="primary" (click)="openCreate()">Add custom</button>
+  </header>
+
+  <div class="stats">
+    <article class="stat">
+      <span class="stat-value">{{ totalElements() }}</span>
+      <span class="stat-label">Exercises</span>
+    </article>
+    <article class="stat">
+      <span class="stat-value">{{ customOnPage() }}</span>
+      <span class="stat-label">Custom on page</span>
+    </article>
+    <article class="stat">
+      <span class="stat-value">{{ muscleGroups().length || '—' }}</span>
+      <span class="stat-label">Muscle groups</span>
+    </article>
+    <article class="stat">
+      <span class="stat-value">{{ page() + 1 }}/{{ totalPages() || 1 }}</span>
+      <span class="stat-label">Page</span>
+    </article>
+  </div>
+
+  <form class="panel filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+    <label>
+      Search
+      <input formControlName="q" placeholder="Bench, squat, curl…" />
+    </label>
+    <label>
+      Muscle group
+      <app-select formControlName="muscleGroup" [options]="filterMuscleOptions()" ariaLabel="Muscle group" />
+    </label>
+    <label>
+      Equipment
+      <app-select formControlName="equipment" [options]="filterEquipmentOptions()" ariaLabel="Equipment" />
+    </label>
+    <div class="filter-actions">
+      <button class="primary" type="submit">Filter</button>
+      <button type="button" class="ghost" (click)="clearFilters()">Clear</button>
+    </div>
+  </form>
+
+  @if (error()) {
+    <p class="error banner">{{ error() }}</p>
+  }
+
+  @if (loading() && rows().length === 0) {
+    <p class="muted loading">Loading exercises…</p>
+  }
+
+  @if (rows().length) {
+    <div class="grid">
+      @for (ex of rows(); track ex.id) {
+        <a class="panel exercise" [routerLink]="['/app/library', ex.id]">
+          <div class="ex-top">
+            <strong>{{ ex.name }}</strong>
+            @if (ex.custom) {
+              <span class="badge">Custom</span>
+            }
+          </div>
+          <p class="meta">
+            {{ label(ex.muscleGroup) }}
+            @if (ex.equipment) {
+              · {{ label(ex.equipment) }}
+            }
+            @if (ex.difficulty) {
+              · {{ label(ex.difficulty) }}
+            }
+          </p>
+          @if (ex.instructions) {
+            <p class="preview">{{ ex.instructions }}</p>
+          }
+          @if (ex.custom) {
+            <div class="row-actions">
+              <button type="button" class="ghost tiny" (click)="openEdit(ex, $event)">Edit</button>
+              <button type="button" class="ghost tiny danger" (click)="remove(ex, $event)">Delete</button>
+            </div>
+          }
+        </a>
+      }
+    </div>
+  } @else if (!loading()) {
+    <div class="empty">
+      <p>No exercises match these filters.</p>
+      <p class="empty-hint">Clear filters or add a custom exercise.</p>
+    </div>
+  }
+
+  @if (totalElements() > 0) {
+    <div class="pager panel">
+      <button type="button" class="ghost" [disabled]="!hasPrevious() || loading()" (click)="prevPage()">
+        Previous
+      </button>
+      <span class="muted">
+        Page {{ page() + 1 }} of {{ totalPages() || 1 }} · {{ totalElements() }} exercises
+      </span>
+      <button type="button" class="ghost" [disabled]="!hasNext() || loading()" (click)="nextPage()">
+        Next
+      </button>
+    </div>
+  }
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop" (click)="closeModal()" role="presentation"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Custom exercise">
+    <div class="modal-head">
+      <h2>{{ editingId() ? 'Edit custom exercise' : 'Add custom exercise' }}</h2>
+      <button type="button" class="ghost close" (click)="closeModal()" aria-label="Close">✕</button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <label>Name <input formControlName="name" placeholder="e.g. Deficit push-up" /></label>
+      <div class="row">
+        <label>
+          Muscle group
+          <app-select formControlName="muscleGroup" [options]="formMuscleOptions()" ariaLabel="Muscle group" />
+        </label>
+        <label>
+          Equipment
+          <app-select formControlName="equipment" [options]="formEquipmentOptions()" ariaLabel="Equipment" />
+        </label>
+      </div>
+      <label>
+        Difficulty
+        <app-select formControlName="difficulty" [options]="difficultyOptions()" ariaLabel="Difficulty" />
+      </label>
+      <label>
+        Instructions
+        <textarea formControlName="instructions" rows="6" placeholder="Step-by-step cues…"></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="button" class="secondary" (click)="closeModal()">Cancel</button>
+        <button class="primary" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : editingId() ? 'Save' : 'Add exercise' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
