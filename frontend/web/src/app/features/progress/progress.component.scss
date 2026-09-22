@@ -2,7 +2,10 @@
   display: grid;
   gap: clamp(1rem, 2.5vw, 1.5rem);
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  overflow-x: clip;
   /* Leave room to scroll the last panel clear of the bottom nav. */
   padding-bottom: 0.5rem;
 }
@@ -10,7 +13,10 @@
 :host {
   display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  overflow-x: clip;
 }
 
 .page-hero {
@@ -19,6 +25,10 @@
   padding: clamp(1.1rem, 3vw, 1.75rem);
   border: 1px solid var(--line);
   border-radius: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background:
     linear-gradient(135deg, var(--glow-accent), transparent 42%),
     linear-gradient(320deg, var(--glow-cool), transparent 50%),
@@ -49,18 +59,24 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   animation: rise 0.55s ease 0.04s both;
 }
 
 .view-toggle {
-  display: inline-flex;
+  display: flex;
   gap: 0.35rem;
   padding: 0.3rem;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
@@ -481,8 +497,10 @@
   display: grid;
   gap: 0.85rem;
   align-content: start;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  min-height: 0;
+  box-sizing: border-box;
   animation: rise 0.55s ease 0.1s both;
 }
 
@@ -495,11 +513,25 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.panel-head h2 {
+.panel-head h2,
+.panel-head h3 {
   margin: 0;
   font-size: 1.05rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-head .ghost,
+.panel-head .tiny,
+.panel-head .count {
+  flex-shrink: 0;
 }
 
 .count {
@@ -640,8 +672,10 @@ input {
 
 .line-chart {
   width: 100%;
-  min-width: 280px;
+  max-width: 100%;
+  min-width: 0;
   height: auto;
+  display: block;
 }
 
 .grid {
@@ -832,7 +866,7 @@ input {
   }
 
   .panel {
-    padding: 0.9rem;
+    padding: 0.85rem;
   }
 
   .progression-banner {
@@ -845,11 +879,8 @@ input {
   }
 
   .chart-wrap {
-    margin-inline: -0.25rem;
-  }
-
-  .line-chart {
-    min-width: 0;
+    margin-inline: 0;
+    max-width: 100%;
   }
 
   .x-label {
@@ -892,5 +923,8 @@ input {
 .body-workspace {
   display: grid;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   animation: rise 0.55s ease 0.06s both;
 }

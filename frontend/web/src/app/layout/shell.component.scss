@@ -461,14 +461,23 @@ nav a.active .nav-icon {
     grid-row: auto;
     flex: 1 1 auto;
     min-height: 0;
+    min-width: 0;
+    width: 100%;
     height: auto;
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Scroll clear of the fixed bottom nav. */
-    padding: 0.85rem 0.85rem calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+    /* Scroll clear of the fixed bottom nav; keep left/right padding even. */
+    padding: 0.75rem 0.75rem calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+  }
+
+  .content > :not(.sync-banner) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 }
 
