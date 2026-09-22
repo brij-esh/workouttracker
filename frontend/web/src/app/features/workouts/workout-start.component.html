@@ -15,13 +15,13 @@
   @if (mode() === 'custom') {
     <form class="panel start-card" [formGroup]="form" (ngSubmit)="startCustom(true)">
       <h2>Custom workout</h2>
-      <p class="hint">Name your session and start — the timer floats on every screen.</p>
+      <p class="hint">Name your session and start — workouts can only be started for today.</p>
       <label>
         Name
         <input formControlName="name" placeholder="e.g. Push day" />
       </label>
       <label>Description <textarea formControlName="description" rows="3"></textarea></label>
-      <label>Date <app-date-input formControlName="workoutDate" ariaLabel="Workout date" /></label>
+      <p class="today-note">Date: <strong>Today</strong> ({{ todayLabel() }})</p>
       <div class="row">
         <label>Minutes <input type="number" formControlName="durationMinutes" placeholder="Auto from timer" /></label>
         <label>Calories <input type="number" formControlName="caloriesBurned" placeholder="Auto on end session" /></label>

@@ -59,6 +59,20 @@
   font-size: 0.9rem;
 }
 
+.today-note {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.today-note strong {
+  color: var(--text);
+}
+
 .row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

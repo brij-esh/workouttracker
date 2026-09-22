@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,12 +67,17 @@ public class WorkoutService {
     public WorkoutResponse createWorkout(String userId, CreateWorkoutRequest request) {
         boolean live = Boolean.TRUE.equals(request.liveSession());
         Instant now = Instant.now();
+        LocalDate today = LocalDate.now();
+        LocalDate requested = request.workoutDate() != null ? request.workoutDate() : today;
+        if (!requested.equals(today)) {
+            throw new WorkoutBadRequestException("Workouts can only be started for today");
+        }
 
         Workout workout = new Workout();
         workout.setUserId(userId);
         workout.setName(request.name());
         workout.setDescription(request.description());
-        workout.setWorkoutDate(request.workoutDate());
+        workout.setWorkoutDate(today);
         workout.setDurationMinutes(request.durationMinutes());
         workout.setCaloriesBurned(request.caloriesBurned());
         workout.setArchived(false);

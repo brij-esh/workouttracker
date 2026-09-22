@@ -5,14 +5,13 @@ import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
 import { ActiveWorkoutSessionService } from '../../core/active-workout-session.service';
 import { WorkoutPlan, WorkoutPlanDay } from '../../core/models';
-import { DateInputComponent } from '../../shared/date-input.component';
 
 type StartMode = 'custom' | 'plan';
 
 @Component({
   selector: 'app-workout-start',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DateInputComponent],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './workout-start.component.html',
   styleUrl: './workout-start.component.scss'
 })
@@ -29,11 +28,11 @@ export class WorkoutStartComponent implements OnInit {
   readonly starting = signal(false);
   readonly loadingPlans = signal(false);
   readonly error = signal<string | null>(null);
+  readonly todayKey = this.localDateKey();
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     description: [''],
-    workoutDate: [this.localDateKey(), Validators.required],
     durationMinutes: [null as number | null],
     caloriesBurned: [null as number | null]
   });
@@ -44,6 +43,10 @@ export class WorkoutStartComponent implements OnInit {
   });
 
   readonly planDays = computed(() => this.selectedPlan()?.days ?? []);
+
+  todayLabel(): string {
+    return this.todayKey;
+  }
 
   ngOnInit(): void {
     this.loadPlans();
@@ -93,7 +96,7 @@ export class WorkoutStartComponent implements OnInit {
     const body = {
       name: raw.name.trim(),
       description: raw.description?.trim() ? raw.description.trim() : null,
-      workoutDate: raw.workoutDate,
+      workoutDate: this.localDateKey(),
       durationMinutes: raw.durationMinutes,
       caloriesBurned: raw.caloriesBurned,
       liveSession: withTimer
@@ -112,16 +115,19 @@ export class WorkoutStartComponent implements OnInit {
         this.form.reset({
           name: '',
           description: '',
-          workoutDate: this.localDateKey(),
           durationMinutes: null,
           caloriesBurned: null
         });
         void this.router.navigate(['/app/workouts', saved.id]);
       },
-      error: () => {
+      error: (err) => {
         this.starting.set(false);
-        this.error.set('Could not start workout');
-        this.toast.error('Could not start workout');
+        const detail =
+          (err as { error?: { detail?: string; message?: string } })?.error?.detail ??
+          (err as { error?: { message?: string } })?.error?.message ??
+          'Could not start workout';
+        this.error.set(detail);
+        this.toast.error(detail);
       }
     });
   }
@@ -136,16 +142,20 @@ export class WorkoutStartComponent implements OnInit {
       return;
     }
     this.starting.set(true);
-    this.api.startPlanDay(plan.id, { planDayId: day.id }).subscribe({
+    this.api.startPlanDay(plan.id, { planDayId: day.id, workoutDate: this.localDateKey() }).subscribe({
       next: (workout) => {
         this.starting.set(false);
         this.session.start(workout.id, workout.name, workout.elapsedMs ?? 0);
         this.toast.success(`${day.dayLabel} started — timer is live`);
         void this.router.navigate(['/app/workouts', workout.id]);
       },
-      error: () => {
+      error: (err) => {
         this.starting.set(false);
-        this.toast.error('Could not start plan day');
+        const detail =
+          (err as { error?: { detail?: string; message?: string } })?.error?.detail ??
+          (err as { error?: { message?: string } })?.error?.message ??
+          'Could not start plan day';
+        this.toast.error(detail);
       }
     });
   }

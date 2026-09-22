@@ -174,15 +174,16 @@ public class WorkoutPlanService {
                 .findByIdAndPlanId(request.planDayId(), planId)
                 .orElseThrow(() -> new WorkoutBadRequestException("Plan day not found"));
 
-        LocalDate workoutDate = request.workoutDate() != null ? request.workoutDate() : LocalDate.now();
-        if (workoutDate.isAfter(LocalDate.now())) {
-            throw new WorkoutBadRequestException("Workout date cannot be in the future");
+        LocalDate today = LocalDate.now();
+        LocalDate workoutDate = request.workoutDate() != null ? request.workoutDate() : today;
+        if (!workoutDate.equals(today)) {
+            throw new WorkoutBadRequestException("Workouts can only be started for today");
         }
 
         String workoutName = plan.getName() + " — " + day.getDayLabel();
         WorkoutResponse workout = workoutService.createWorkout(
                 userId,
-                new CreateWorkoutRequest(workoutName, plan.getDescription(), workoutDate, null, null, true)
+                new CreateWorkoutRequest(workoutName, plan.getDescription(), today, null, null, true)
         );
 
         List<WorkoutPlanExercise> exercises = workoutPlanExerciseRepository
