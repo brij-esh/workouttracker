@@ -40,6 +40,65 @@
   @if (loading()) {
     <p class="muted loading">Pulling your training snapshot…</p>
   } @else {
+    <section class="steps-highlight" aria-label="Today’s steps">
+      <div class="steps-main">
+        <p class="steps-kicker">Today’s movement</p>
+        <div class="steps-figures">
+          <div>
+            <strong class="steps-value">{{ todaySteps() | number }}</strong>
+            <span class="steps-label">steps</span>
+          </div>
+          <div>
+            <strong class="steps-value kcal">{{ todayStepCalories() | number }}</strong>
+            <span class="steps-label">kcal from steps</span>
+          </div>
+        </div>
+        <div class="steps-bar" aria-hidden="true">
+          <div class="steps-bar-fill" [style.width.%]="stepProgressPct()"></div>
+        </div>
+        <p class="steps-meta muted">
+          Goal {{ stepGoal | number }} ·
+          @if (stepsToday(); as s) {
+            via {{ sourceLabel(s) }}
+          } @else {
+            not logged yet
+          }
+        </p>
+      </div>
+      <div class="steps-controls">
+        <div class="steps-manual">
+          <label>
+            <span class="sr-only">Steps today</span>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              [ngModel]="manualSteps()"
+              (ngModelChange)="manualSteps.set($event)"
+              placeholder="Enter steps"
+              [disabled]="stepsBusy()"
+            />
+          </label>
+          <button type="button" class="primary" [disabled]="stepsBusy()" (click)="saveManualSteps()">
+            Save
+          </button>
+        </div>
+        <div class="steps-connect">
+          <button type="button" class="secondary" [disabled]="stepsBusy()" (click)="connectPhone()">
+            {{ stepsPlatform.devicePermission() === 'granted' ? 'Sync phone' : 'Allow phone steps' }}
+          </button>
+          <button type="button" class="secondary" [disabled]="stepsBusy()" (click)="connectWearable()">
+            {{ stepsPlatform.wearableConnected() ? 'Sync wearable' : 'Connect wearable' }}
+          </button>
+        </div>
+        @if (!stepsCapability.nativeBridge) {
+          <p class="steps-note muted">
+            Phone HealthKit / Health Connect needs a native app wrapper. Permissions are stored; use Save for now.
+          </p>
+        }
+      </div>
+    </section>
+
     <section class="stats" aria-label="Weekly snapshot">
       <div class="stat">
         <span class="stat-value">{{ weekWorkouts().length }}</span>
@@ -130,6 +189,30 @@
         <strong>Check alerts</strong>
         <span>{{ unreadCount() }} unread right now</span>
       </a>
+    </section>
+
+    <section class="steps-history panel" aria-label="Daily steps">
+      <div class="panel-head">
+        <h2>Daily steps</h2>
+        <span class="muted">Last 14 days</span>
+      </div>
+      <ul class="steps-days">
+        @for (row of stepHistoryRows(); track row.date) {
+          <li [class.today]="row.date === todayKey" [class.empty]="row.steps === 0">
+            <div class="steps-day-copy">
+              <strong>{{ row.date === todayKey ? 'Today' : (row.date | date: 'EEE d MMM') }}</strong>
+              <span class="muted">{{ row.source }}</span>
+            </div>
+            <div class="steps-day-stats">
+              <span>{{ row.steps | number }} steps</span>
+              <span>{{ row.calories | number }} kcal</span>
+            </div>
+            <div class="steps-day-bar" aria-hidden="true">
+              <div class="steps-day-bar-fill" [style.width.%]="row.pct"></div>
+            </div>
+          </li>
+        }
+      </ul>
     </section>
 
     <div class="panels">

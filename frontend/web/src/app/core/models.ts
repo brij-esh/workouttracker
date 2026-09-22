@@ -239,6 +239,29 @@ export interface WaterLogRequest {
   notes?: string | null;
 }
 
+export type StepSource = 'MANUAL' | 'DEVICE' | 'WEARABLE';
+
+export interface StepLog {
+  id: string;
+  userId: string;
+  recordedOn: string;
+  steps: number;
+  caloriesBurned: number;
+  source: StepSource;
+  sourceLabel: string | null;
+  weightKg: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StepLogRequest {
+  recordedOn: string;
+  steps: number;
+  source?: StepSource;
+  sourceLabel?: string | null;
+  weightKg?: number | null;
+}
+
 export type NutritionGoal = 'CUTTING' | 'BULKING' | 'MAINTENANCE' | 'RECOMPOSITION';
 
 export interface NutritionTarget {

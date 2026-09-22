@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ApiCacheService, CacheScope } from './api-cache.service';
 import {
@@ -42,7 +42,9 @@ import {
   WorkoutPlan,
   WorkoutRequest,
   UpdatePlanScheduleRequest,
-  UpdateWorkoutPlanRequest
+  UpdateWorkoutPlanRequest,
+  StepLog,
+  StepLogRequest
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -474,6 +476,42 @@ export class ApiService {
     return this.http
       .post<PersonalRecord>(`${this.base}/progress/personal-records/${id}/archive`, {})
       .pipe(tap(() => this.cache.invalidate('progress', 'archived')));
+  }
+
+  listStepLogs(options?: { from?: string; to?: string }): Observable<StepLog[]> {
+    const params = new URLSearchParams();
+    if (options?.from) {
+      params.set('from', options.from);
+    }
+    if (options?.to) {
+      params.set('to', options.to);
+    }
+    const qs = params.toString();
+    return this.cached(`steps:list:${qs}`, ['progress'], () =>
+      this.http.get<StepLog[]>(`${this.base}/progress/steps${qs ? `?${qs}` : ''}`)
+    );
+  }
+
+  getStepsForDay(date?: string): Observable<StepLog | null> {
+    const qs = date ? `?date=${date}` : '';
+    return this.cached(`steps:day:${date ?? 'today'}`, ['progress'], () =>
+      this.http.get<StepLog>(`${this.base}/progress/steps/day${qs}`, { observe: 'response' }).pipe(
+        map((res) => (res.status === 204 ? null : (res.body ?? null))),
+        catchError(() => of(null))
+      )
+    );
+  }
+
+  upsertSteps(body: StepLogRequest): Observable<StepLog> {
+    return this.http.put<StepLog>(`${this.base}/progress/steps`, body).pipe(
+      tap(() => this.cache.invalidate('progress'))
+    );
+  }
+
+  deleteStepLog(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/progress/steps/${id}`).pipe(
+      tap(() => this.cache.invalidate('progress'))
+    );
   }
 
   listMeals(date?: string): Observable<Meal[]> {

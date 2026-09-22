@@ -1,0 +1,167 @@
+import { Injectable, signal } from '@angular/core';
+import { StepSource } from './models';
+
+export type StepsPermissionState = 'unknown' | 'granted' | 'denied' | 'unsupported';
+
+export interface StepsCapability {
+  deviceSupported: boolean;
+  wearableSupported: boolean;
+  /** True when a native Capacitor Health plugin bridge is present. */
+  nativeBridge: boolean;
+  reason: string;
+}
+
+export interface StepsSample {
+  steps: number;
+  source: StepSource;
+  sourceLabel: string;
+  recordedOn: string;
+}
+
+const DEVICE_PERM_KEY = 'repwise.steps.devicePermission';
+const WEARABLE_PERM_KEY = 'repwise.steps.wearablePermission';
+const WEARABLE_CONNECTED_KEY = 'repwise.steps.wearableConnected';
+
+/**
+ * Reads / requests step access. Browsers cannot reach HealthKit or Health Connect;
+ * a Capacitor (or similar) native bridge can. Until then we support consent + manual
+ * entry and keep hooks for device/wearable sync.
+ */
+@Injectable({ providedIn: 'root' })
+export class StepsPlatformService {
+  readonly devicePermission = signal<StepsPermissionState>(this.readPerm(DEVICE_PERM_KEY));
+  readonly wearablePermission = signal<StepsPermissionState>(this.readPerm(WEARABLE_PERM_KEY));
+  readonly wearableConnected = signal(localStorage.getItem(WEARABLE_CONNECTED_KEY) === '1');
+
+  capability(): StepsCapability {
+    const nativeBridge = this.hasNativeHealthBridge();
+    if (nativeBridge) {
+      return {
+        deviceSupported: true,
+        wearableSupported: true,
+        nativeBridge: true,
+        reason: 'Native health bridge detected'
+      };
+    }
+    return {
+      deviceSupported: false,
+      wearableSupported: false,
+      nativeBridge: false,
+      reason:
+        'Safari and Chrome cannot read HealthKit / Health Connect. Connect access is ready for a native wrapper; you can log steps manually meanwhile.'
+    };
+  }
+
+  async requestDevicePermission(): Promise<StepsPermissionState> {
+    const cap = this.capability();
+    if (!cap.deviceSupported) {
+      this.setPerm(DEVICE_PERM_KEY, 'unsupported');
+      this.devicePermission.set('unsupported');
+      return 'unsupported';
+    }
+    try {
+      const bridge = this.nativeBridge();
+      if (bridge?.requestPermissions) {
+        const ok = await bridge.requestPermissions(['steps']);
+        const state: StepsPermissionState = ok ? 'granted' : 'denied';
+        this.setPerm(DEVICE_PERM_KEY, state);
+        this.devicePermission.set(state);
+        return state;
+      }
+    } catch {
+      this.setPerm(DEVICE_PERM_KEY, 'denied');
+      this.devicePermission.set('denied');
+      return 'denied';
+    }
+    this.setPerm(DEVICE_PERM_KEY, 'unsupported');
+    this.devicePermission.set('unsupported');
+    return 'unsupported';
+  }
+
+  async requestWearablePermission(): Promise<StepsPermissionState> {
+    const cap = this.capability();
+    if (!cap.wearableSupported && !cap.nativeBridge) {
+      // Still allow user to mark consent for when a watch sync bridge is available.
+      this.setPerm(WEARABLE_PERM_KEY, 'granted');
+      this.wearablePermission.set('granted');
+      localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
+      this.wearableConnected.set(true);
+      return 'granted';
+    }
+    try {
+      const bridge = this.nativeBridge();
+      if (bridge?.requestPermissions) {
+        const ok = await bridge.requestPermissions(['steps', 'wearable']);
+        const state: StepsPermissionState = ok ? 'granted' : 'denied';
+        this.setPerm(WEARABLE_PERM_KEY, state);
+        this.wearablePermission.set(state);
+        if (ok) {
+          localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
+          this.wearableConnected.set(true);
+        }
+        return state;
+      }
+    } catch {
+      this.setPerm(WEARABLE_PERM_KEY, 'denied');
+      this.wearablePermission.set('denied');
+      return 'denied';
+    }
+    this.setPerm(WEARABLE_PERM_KEY, 'granted');
+    this.wearablePermission.set('granted');
+    localStorage.setItem(WEARABLE_CONNECTED_KEY, '1');
+    this.wearableConnected.set(true);
+    return 'granted';
+  }
+
+  disconnectWearable(): void {
+    localStorage.removeItem(WEARABLE_CONNECTED_KEY);
+    this.wearableConnected.set(false);
+  }
+
+  async readTodaySteps(preferred: 'DEVICE' | 'WEARABLE' = 'DEVICE'): Promise<StepsSample | null> {
+    const bridge = this.nativeBridge();
+    if (!bridge?.querySteps) {
+      return null;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await bridge.querySteps({ from: today, to: today });
+    if (!result || typeof result.steps !== 'number') {
+      return null;
+    }
+    return {
+      steps: Math.max(0, Math.round(result.steps)),
+      source: preferred,
+      sourceLabel: result.sourceLabel || (preferred === 'WEARABLE' ? 'Wearable' : 'Phone'),
+      recordedOn: today
+    };
+  }
+
+  private hasNativeHealthBridge(): boolean {
+    return !!this.nativeBridge();
+  }
+
+  private nativeBridge(): NativeHealthBridge | null {
+    const w = window as Window & { RepwiseHealth?: NativeHealthBridge; Capacitor?: unknown };
+    if (w.RepwiseHealth?.querySteps || w.RepwiseHealth?.requestPermissions) {
+      return w.RepwiseHealth;
+    }
+    return null;
+  }
+
+  private readPerm(key: string): StepsPermissionState {
+    const raw = localStorage.getItem(key);
+    if (raw === 'granted' || raw === 'denied' || raw === 'unsupported') {
+      return raw;
+    }
+    return 'unknown';
+  }
+
+  private setPerm(key: string, state: StepsPermissionState): void {
+    localStorage.setItem(key, state);
+  }
+}
+
+interface NativeHealthBridge {
+  requestPermissions?(scopes: string[]): Promise<boolean>;
+  querySteps?(range: { from: string; to: string }): Promise<{ steps: number; sourceLabel?: string } | null>;
+}

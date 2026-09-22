@@ -79,6 +79,203 @@
   font-size: 0.9rem;
 }
 
+.steps-highlight {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    var(--panel);
+  animation: rise 0.55s ease 0.06s both;
+}
+
+.steps-kicker {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.steps-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.75rem;
+}
+
+.steps-figures > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.steps-value {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-value.kcal {
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+}
+
+.steps-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.steps-bar {
+  margin-top: 0.85rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  overflow: hidden;
+}
+
+.steps-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+
+.steps-meta {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+}
+
+.steps-controls {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.steps-manual {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+}
+
+.steps-manual input {
+  min-height: 2.55rem;
+  width: 100%;
+}
+
+.steps-connect {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.steps-connect .secondary {
+  min-height: 2.45rem;
+  font-size: 0.85rem;
+  padding-inline: 0.55rem;
+}
+
+.steps-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.steps-history {
+  animation: rise 0.55s ease 0.1s both;
+}
+
+.steps-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.steps-days li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+}
+
+.steps-days li.today {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+.steps-days li.empty {
+  opacity: 0.72;
+}
+
+.steps-day-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.steps-day-copy strong {
+  font-size: 0.92rem;
+}
+
+.steps-day-copy .muted,
+.steps-day-stats {
+  font-size: 0.78rem;
+}
+
+.steps-day-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  align-self: center;
+}
+
+.steps-day-bar {
+  grid-column: 1 / -1;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  overflow: hidden;
+}
+
+.steps-day-bar-fill {
+  height: 100%;
+  background: color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 700px) {
+  .steps-highlight {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-connect {
+    grid-template-columns: 1fr;
+  }
+}
+
 .onboard-banner {
   display: flex;
   flex-wrap: wrap;
