@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
 import { WorkoutConsistency } from '../../core/models';
@@ -6,6 +7,7 @@ import { WorkoutConsistency } from '../../core/models';
 @Component({
   selector: 'app-consistency-progress',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './consistency-progress.component.html',
   styleUrl: './consistency-progress.component.scss'
 })

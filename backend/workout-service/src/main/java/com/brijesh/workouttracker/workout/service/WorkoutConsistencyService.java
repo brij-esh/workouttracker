@@ -71,6 +71,8 @@ public class WorkoutConsistencyService {
 
         ActivePlan activePlan = resolveActivePlan(userId);
         Set<Weekday> plannedWeekdays = activePlan.plannedWeekdays();
+        List<String> plannedLabels = weekdayShortLabels(plannedWeekdays);
+        List<String> restLabels = restWeekdayShortLabels(plannedWeekdays);
 
         int workoutsThisMonth = countWorkoutsInRange(countsByDate, monthStart, monthEndInclusive);
         int workoutsThisWeek = countWorkoutsInRange(countsByDate, weekStart, today);
@@ -125,6 +127,8 @@ public class WorkoutConsistencyService {
                 target.toString(),
                 monthLabel,
                 activePlan.name(),
+                restLabels,
+                plannedLabels,
                 workoutsThisMonth,
                 planned,
                 missed,
@@ -256,6 +260,41 @@ public class WorkoutConsistencyService {
             case FRIDAY -> Weekday.FRIDAY;
             case SATURDAY -> Weekday.SATURDAY;
             case SUNDAY -> Weekday.SUNDAY;
+        };
+    }
+
+    private static List<String> weekdayShortLabels(Set<Weekday> weekdays) {
+        List<String> labels = new ArrayList<>();
+        for (Weekday day : Weekday.values()) {
+            if (weekdays.contains(day)) {
+                labels.add(shortLabel(day));
+            }
+        }
+        return labels;
+    }
+
+    private static List<String> restWeekdayShortLabels(Set<Weekday> plannedWeekdays) {
+        if (plannedWeekdays.isEmpty()) {
+            return List.of();
+        }
+        List<String> labels = new ArrayList<>();
+        for (Weekday day : Weekday.values()) {
+            if (!plannedWeekdays.contains(day)) {
+                labels.add(shortLabel(day));
+            }
+        }
+        return labels;
+    }
+
+    private static String shortLabel(Weekday day) {
+        return switch (day) {
+            case MONDAY -> "Mon";
+            case TUESDAY -> "Tue";
+            case WEDNESDAY -> "Wed";
+            case THURSDAY -> "Thu";
+            case FRIDAY -> "Fri";
+            case SATURDAY -> "Sat";
+            case SUNDAY -> "Sun";
         };
     }
 

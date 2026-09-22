@@ -7,6 +7,8 @@ public record WorkoutConsistencyResponse(
         String month,
         String monthLabel,
         String planName,
+        List<String> restWeekdays,
+        List<String> plannedWeekdays,
         int completed,
         int planned,
         int missed,

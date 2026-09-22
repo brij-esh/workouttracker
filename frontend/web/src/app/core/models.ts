@@ -514,6 +514,8 @@ export interface WorkoutConsistency {
   month: string;
   monthLabel: string;
   planName: string | null;
+  restWeekdays?: string[];
+  plannedWeekdays?: string[];
   completed: number;
   planned: number;
   missed: number;

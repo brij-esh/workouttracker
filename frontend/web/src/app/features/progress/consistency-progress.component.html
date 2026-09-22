@@ -36,6 +36,11 @@
     <p class="plan-line muted">
       @if (c.planName) {
         Tracking against plan: <strong>{{ c.planName }}</strong>
+        @if (c.restWeekdays?.length) {
+          · Rest:
+          <strong>{{ c.restWeekdays!.join(', ') }}</strong>
+        }
+        <a routerLink="/app/workouts/plans" class="plan-edit">Change schedule</a>
       } @else {
         No active plan linked - planned days stay at 0 until you set a schedule.
       }
@@ -102,6 +107,7 @@
         <span class="heat-cell" data-level="3"></span>
         <span class="heat-cell" data-level="4"></span>
         <span>More</span>
+        <span class="rest-key">Rest / off</span>
         <span class="missed-key">Missed planned day</span>
       </div>
     </article>

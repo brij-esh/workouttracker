@@ -552,10 +552,10 @@ public class WorkoutPlanService {
                     slot(Weekday.MONDAY, "Push"),
                     slot(Weekday.TUESDAY, "Pull"),
                     slot(Weekday.WEDNESDAY, "Legs"),
-                    slot(Weekday.THURSDAY, null),
-                    slot(Weekday.FRIDAY, "Push"),
-                    slot(Weekday.SATURDAY, "Pull"),
-                    slot(Weekday.SUNDAY, "Legs")
+                    slot(Weekday.THURSDAY, "Push"),
+                    slot(Weekday.FRIDAY, "Pull"),
+                    slot(Weekday.SATURDAY, "Legs"),
+                    slot(Weekday.SUNDAY, null)
             );
             case UPPER_LOWER -> List.of(
                     slot(Weekday.MONDAY, "Upper A"),

@@ -44,7 +44,7 @@ export class WorkoutPlansComponent implements OnInit {
       type: 'PPL',
       name: 'Push / Pull / Legs',
       meta: '6 days · intermediate',
-      description: 'Classic hypertrophy split with one rest day mid-week.'
+      description: 'Classic hypertrophy split with Sunday as the rest day.'
     },
     {
       type: 'UPPER_LOWER',
