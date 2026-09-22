@@ -1,4 +1,4 @@
-<div class="shell">
+<div class="shell" [class.has-workout-fab]="session.hasSession()">
   <header class="topbar">
     <button type="button" class="brand" (click)="hardRefreshHome()" aria-label="Repwise home">
       <span class="mark" aria-hidden="true">{{ brand.shortName }}</span>

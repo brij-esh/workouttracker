@@ -456,6 +456,25 @@
     justify-content: center;
     width: 100%;
   }
+
+  .region-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .region-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .region-actions .secondary {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0.55rem;
+    font-size: 0.88rem;
+  }
 }
 
 @media (max-width: 380px) {

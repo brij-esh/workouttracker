@@ -473,6 +473,11 @@ nav a.active .nav-icon {
     padding: 0.75rem 0.75rem calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
   }
 
+  .shell.has-workout-fab .content {
+    /* Extra room so the docked timer chip does not cover set actions. */
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 4.25rem);
+  }
+
   .content > :not(.sync-banner) {
     width: 100%;
     max-width: 100%;

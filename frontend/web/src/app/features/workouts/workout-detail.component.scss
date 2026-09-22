@@ -164,6 +164,7 @@
   padding: 0.65rem 0.5rem 0.25rem;
   border-radius: 0.75rem;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
+  min-width: 0;
 }
 
 .previous-card {
@@ -221,9 +222,10 @@
 .sets-head,
 .set-row {
   display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: 3.25rem minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 0.4rem;
   align-items: center;
+  min-width: 0;
 }
 
 .sets-head {
@@ -234,9 +236,19 @@
   padding: 0 0.15rem;
 }
 
+.field {
+  display: contents;
+}
+
+.field-label {
+  display: none;
+}
+
 .set-row input[type='number'] {
   min-height: 2.35rem;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .set-row.done {
@@ -249,15 +261,18 @@
   gap: 0.35rem;
   margin: 0;
   font-weight: 600;
+  min-width: 0;
+}
+
+.set-num {
+  font-variant-numeric: tabular-nums;
 }
 
 .set-actions {
   display: flex;
-  gap: 0.2rem;
-}
-
-.danger-text {
-  color: #f87171;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
 }
 
 .add-set {
@@ -386,11 +401,97 @@
     flex: 1;
   }
 
+  .sets-head {
+    display: none;
+  }
+
+  .sets-panel {
+    gap: 0.55rem;
+    padding: 0.55rem 0.4rem 0.15rem;
+  }
+
+  .set-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'check check actions'
+      'reps kg rest';
+    gap: 0.45rem 0.4rem;
+    padding: 0.65rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--panel);
+    align-items: stretch;
+  }
+
+  .set-row .check {
+    grid-area: check;
+    align-self: center;
+  }
+
+  .set-row .set-actions {
+    grid-area: actions;
+    justify-content: flex-end;
+    align-self: center;
+    flex-wrap: nowrap;
+  }
+
+  .set-row .set-actions .ghost {
+    min-height: 2.15rem;
+    padding: 0.3rem 0.55rem;
+  }
+
+  .set-row .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .set-row .field-reps {
+    grid-area: reps;
+  }
+
+  .set-row .field-kg {
+    grid-area: kg;
+  }
+
+  .set-row .field-rest {
+    grid-area: rest;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .set-row input[type='number'] {
+    min-height: 2.55rem;
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  .add-set {
+    width: 100%;
+    justify-self: stretch;
+    margin-top: 0.15rem;
+    margin-bottom: 0.35rem;
+  }
+
   .form-actions {
     width: 100%;
   }
 
   .form-actions button {
     flex: 1;
+  }
+}
+
+@media (max-width: 380px) {
+  .set-row .set-actions .ghost.danger {
+    padding-inline: 0.45rem;
   }
 }

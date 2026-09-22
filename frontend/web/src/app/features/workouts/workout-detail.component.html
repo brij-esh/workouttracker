@@ -140,7 +140,7 @@
                 }
               }
 
-              <div class="sets-head">
+              <div class="sets-head" aria-hidden="true">
                 <span>Set</span><span>Reps</span><span>kg</span><span>Rest</span><span></span>
               </div>
               @for (set of setsFor(ex.id); track set.id) {
@@ -151,29 +151,44 @@
                       [checked]="set.completed"
                       (change)="toggleComplete(ex, set)"
                     />
-                    <span>{{ set.setNumber }}</span>
+                    <span class="set-num">{{ set.setNumber }}</span>
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    [value]="set.reps ?? ''"
-                    (change)="updateSetField(ex, set, 'reps', $any($event.target).value)"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    [value]="set.weightKg ?? ''"
-                    (change)="updateSetField(ex, set, 'weightKg', $any($event.target).value)"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    [value]="set.restSeconds ?? 90"
-                    (change)="updateSetField(ex, set, 'restSeconds', $any($event.target).value)"
-                    title="Rest seconds"
-                  />
-                  <div class="row-actions">
+                  <label class="field field-reps">
+                    <span class="field-label">Reps</span>
+                    <input
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      [value]="set.reps ?? ''"
+                      (change)="updateSetField(ex, set, 'reps', $any($event.target).value)"
+                      aria-label="Reps"
+                    />
+                  </label>
+                  <label class="field field-kg">
+                    <span class="field-label">kg</span>
+                    <input
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      step="0.5"
+                      [value]="set.weightKg ?? ''"
+                      (change)="updateSetField(ex, set, 'weightKg', $any($event.target).value)"
+                      aria-label="Weight kg"
+                    />
+                  </label>
+                  <label class="field field-rest">
+                    <span class="field-label">Rest</span>
+                    <input
+                      type="number"
+                      inputmode="numeric"
+                      min="0"
+                      [value]="set.restSeconds ?? 90"
+                      (change)="updateSetField(ex, set, 'restSeconds', $any($event.target).value)"
+                      title="Rest seconds"
+                      aria-label="Rest seconds"
+                    />
+                  </label>
+                  <div class="set-actions">
                     <button type="button" class="ghost tiny" (click)="startRest(ex, set)">Rest</button>
                     <button type="button" class="ghost tiny danger" (click)="removeSet(ex, set)">Remove</button>
                   </div>

@@ -215,6 +215,21 @@
     left: auto;
     right: 0.75rem;
     width: fit-content;
+    max-width: min(11.5rem, calc(100vw - 1.5rem));
+    padding: 0.35rem 0.7rem;
+  }
+
+  .fab-peek-hint {
+    display: none;
+  }
+
+  .fab-peek-bar {
+    gap: 0.45rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .fab-card.docked {
     max-width: calc(100vw - 1.5rem);
   }
 }
