@@ -41,7 +41,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   readonly isNew = signal(false);
   readonly error = signal<string | null>(null);
   readonly saved = signal(false);
-  readonly detecting = signal(false);
+  readonly detecting = signal<'timezone' | 'location' | null>(null);
 
   readonly cropSrc = signal<string | null>(null);
   readonly photoBusy = signal(false);
@@ -319,10 +319,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
-  async detectRegion(): Promise<void> {
-    this.detecting.set(true);
+  async detectRegionFromTimezone(): Promise<void> {
+    await this.applyDetectedRegion('timezone', () => Promise.resolve(this.region.refresh()));
+  }
+
+  async detectRegionFromLocation(): Promise<void> {
+    await this.applyDetectedRegion('location', () => this.region.detectFromLocation());
+  }
+
+  private async applyDetectedRegion(
+    mode: 'timezone' | 'location',
+    detect: () => Promise<{ timezone: string; region: string | null; suggestedUnits: 'METRIC' | 'IMPERIAL'; label: string }>
+  ): Promise<void> {
+    if (this.detecting()) {
+      return;
+    }
+    this.detecting.set(mode);
     try {
-      const detected = await this.region.detectWithPermission();
+      const detected = await detect();
       this.form.patchValue({
         timezone: detected.timezone,
         region: detected.region ?? '',
@@ -330,7 +344,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
 
       if (this.isNew()) {
-        this.toast.success(`Region set to ${detected.label} - save your profile to keep it`);
+        this.toast.success(`Region set to ${detected.label} — save your profile to keep it`);
         return;
       }
 
@@ -349,8 +363,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
           },
           error: () => this.toast.error('Could not save region')
         });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not detect region';
+      this.toast.error(message);
     } finally {
-      this.detecting.set(false);
+      this.detecting.set(null);
     }
   }
 

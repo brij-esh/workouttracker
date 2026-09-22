@@ -1,11 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 
+export type RegionDetectSource = 'timezone' | 'location';
+
 export interface DetectedRegion {
   timezone: string;
   region: string | null;
   locale: string;
   suggestedUnits: 'METRIC' | 'IMPERIAL';
   label: string;
+  source: RegionDetectSource;
 }
 
 /** Countries that conventionally use imperial body-weight units. */
@@ -92,33 +95,55 @@ const TIMEZONE_REGION: Record<string, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class RegionService {
-  private readonly detectedSignal = signal<DetectedRegion>(this.detectFromDevice());
+  private readonly detectedSignal = signal<DetectedRegion>(this.detectFromTimezone());
 
   readonly detected = this.detectedSignal.asReadonly();
 
-  /** Re-read timezone/region from the browser/OS. */
+  /** Re-read timezone/region from the browser/OS clock. */
   refresh(): DetectedRegion {
-    const next = this.detectFromDevice();
-    this.detectedSignal.set(next);
-    return next;
+    return this.apply(this.detectFromTimezone());
   }
 
-  detectFromDevice(): DetectedRegion {
+  detectFromTimezone(): DetectedRegion {
     const timezone = this.readTimezone();
     const locale = this.readLocale();
-    const region = this.readRegion(locale, timezone);
+    const region = this.readRegionFromTimezone(locale, timezone);
     const suggestedUnits = region && IMPERIAL_REGIONS.has(region) ? 'IMPERIAL' : 'METRIC';
-    const label = this.formatLabel(timezone, region);
-    return { timezone, region, locale, suggestedUnits, label };
+    const label = this.formatLabel(timezone, region, 'timezone');
+    return { timezone, region, locale, suggestedUnits, label, source: 'timezone' };
   }
 
   /**
-   * Re-detect from the device clock/timezone (most reliable for region).
-   * GPS is intentionally not used — browser locale/GPS often disagree with
-   * where the user actually is.
+   * Ask for GPS, reverse-geocode to a country code, keep device timezone.
+   * Falls back to timezone detection if permission is denied or lookup fails.
    */
+  async detectFromLocation(): Promise<DetectedRegion> {
+    const position = await this.readPosition();
+    const geo = await this.reverseGeocode(position.coords.latitude, position.coords.longitude);
+    const timezone = this.readTimezone();
+    const locale = this.readLocale();
+    const region = geo.region ?? this.readRegionFromTimezone(locale, timezone);
+    const suggestedUnits = region && IMPERIAL_REGIONS.has(region) ? 'IMPERIAL' : 'METRIC';
+    const place = geo.place || (timezone.includes('/') ? timezone.split('/').pop()!.replace(/_/g, ' ') : timezone);
+    const label = region ? `${region} · ${place} (location)` : `${place} (location)`;
+    return this.apply({
+      timezone,
+      region,
+      locale,
+      suggestedUnits,
+      label,
+      source: 'location'
+    });
+  }
+
+  /** @deprecated Prefer detectFromTimezone / detectFromLocation. */
   async detectWithPermission(): Promise<DetectedRegion> {
     return this.refresh();
+  }
+
+  private apply(next: DetectedRegion): DetectedRegion {
+    this.detectedSignal.set(next);
+    return next;
   }
 
   private readTimezone(): string {
@@ -133,8 +158,7 @@ export class RegionService {
     return navigator.language || (navigator.languages && navigator.languages[0]) || 'en-US';
   }
 
-  private readRegion(locale: string, timezone: string): string | null {
-    // Prefer timezone — locale language packs (e.g. en-US) mislead often.
+  private readRegionFromTimezone(locale: string, timezone: string): string | null {
     const fromTz = this.regionFromTimezone(timezone);
     if (fromTz) {
       return fromTz;
@@ -165,8 +189,6 @@ export class RegionService {
     if (TIMEZONE_REGION[timezone]) {
       return TIMEZONE_REGION[timezone];
     }
-    // Soft match: America/* → US only for common US zones already listed;
-    // Asia/Kolkata variants already covered.
     if (timezone.startsWith('America/')) {
       const usHints = ['New_York', 'Chicago', 'Denver', 'Los_Angeles', 'Phoenix', 'Detroit', 'Indiana'];
       if (usHints.some((h) => timezone.includes(h))) {
@@ -176,10 +198,59 @@ export class RegionService {
     return null;
   }
 
-  private formatLabel(timezone: string, region: string | null): string {
+  private readPosition(): Promise<GeolocationPosition> {
+    if (!navigator.geolocation) {
+      return Promise.reject(new Error('Location is not available on this device'));
+    }
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          reject(new Error('Location permission denied'));
+        } else if (err.code === err.TIMEOUT) {
+          reject(new Error('Location timed out — try again'));
+        } else {
+          reject(new Error('Could not read location'));
+        }
+      }, {
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 5 * 60 * 1000
+      });
+    });
+  }
+
+  private async reverseGeocode(
+    latitude: number,
+    longitude: number
+  ): Promise<{ region: string | null; place: string | null }> {
+    const url =
+      `https://api.bigdatacloud.net/data/reverse-geocode-client` +
+      `?latitude=${encodeURIComponent(String(latitude))}` +
+      `&longitude=${encodeURIComponent(String(longitude))}` +
+      `&localityLanguage=en`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error('Could not resolve location to a region');
+    }
+    const data = (await res.json()) as {
+      countryCode?: string;
+      city?: string;
+      locality?: string;
+      principalSubdivision?: string;
+    };
+    const region =
+      data.countryCode && /^[A-Za-z]{2}$/.test(data.countryCode)
+        ? data.countryCode.toUpperCase()
+        : null;
+    const place = data.city || data.locality || data.principalSubdivision || null;
+    return { region, place };
+  }
+
+  private formatLabel(timezone: string, region: string | null, source: RegionDetectSource): string {
     const city = timezone.includes('/')
       ? timezone.split('/').pop()!.replace(/_/g, ' ')
       : timezone;
-    return region ? `${region} · ${city}` : city;
+    const base = region ? `${region} · ${city}` : city;
+    return source === 'location' ? `${base} (location)` : `${base} (timezone)`;
   }
 }

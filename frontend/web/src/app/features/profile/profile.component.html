@@ -209,7 +209,7 @@
     <div class="region-copy">
       <h2>Region &amp; timezone</h2>
       <p class="muted">
-        From your device timezone (not GPS):
+        Detected:
         <strong>{{ region.detected().label }}</strong>
       </p>
       @if (profile(); as p) {
@@ -225,9 +225,24 @@
         </dl>
       }
     </div>
-    <button type="button" class="secondary" [disabled]="detecting()" (click)="detectRegion()">
-      {{ detecting() ? 'Detecting...' : 'Refresh from timezone' }}
-    </button>
+    <div class="region-actions">
+      <button
+        type="button"
+        class="secondary"
+        [disabled]="detecting() !== null"
+        (click)="detectRegionFromTimezone()"
+      >
+        {{ detecting() === 'timezone' ? 'Detecting...' : 'Use timezone' }}
+      </button>
+      <button
+        type="button"
+        class="secondary"
+        [disabled]="detecting() !== null"
+        (click)="detectRegionFromLocation()"
+      >
+        {{ detecting() === 'location' ? 'Detecting...' : 'Use location' }}
+      </button>
+    </div>
   </section>
 
   <section class="card theme-card">

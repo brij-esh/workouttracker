@@ -484,3 +484,14 @@
 .region-copy .muted {
   margin: 0 0 0.75rem;
 }
+
+.region-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  flex: 0 1 auto;
+}
+
+.region-actions .secondary {
+  min-height: 2.5rem;
+}
