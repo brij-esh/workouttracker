@@ -5,6 +5,7 @@ import com.brijesh.workouttracker.progress.dto.StepLogRequest;
 import com.brijesh.workouttracker.progress.dto.StepLogResponse;
 import com.brijesh.workouttracker.progress.entity.StepLog;
 import com.brijesh.workouttracker.progress.repository.StepLogRepository;
+import com.brijesh.workouttracker.security.RequestClock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +27,7 @@ public class StepLogService {
     private final StepLogRepository stepLogRepository;
 
     public List<StepLogResponse> list(String userId, LocalDate from, LocalDate to) {
-        LocalDate end = to != null ? to : LocalDate.now();
+        LocalDate end = to != null ? to : RequestClock.today();
         LocalDate start = from != null ? from : end.minusDays(29);
         if (start.isAfter(end)) {
             LocalDate swap = start;
@@ -49,10 +50,12 @@ public class StepLogService {
     @Transactional
     public StepLogResponse upsert(String userId, StepLogRequest request) {
         LocalDate day = request.recordedOn();
-        if (day.isAfter(LocalDate.now())) {
+        LocalDate today = RequestClock.today();
+        // Allow +1 day so client local dates ahead of server UTC still work.
+        if (day.isAfter(today.plusDays(1))) {
             throw new ProgressBadRequestException("Cannot log steps for a future date");
         }
-        if (day.isBefore(LocalDate.now().minusDays(90))) {
+        if (day.isBefore(today.minusDays(90))) {
             throw new ProgressBadRequestException("Steps older than 90 days cannot be edited");
         }
 

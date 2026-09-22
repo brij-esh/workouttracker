@@ -3,6 +3,7 @@ package com.brijesh.workouttracker.progress.controller;
 import com.brijesh.workouttracker.progress.dto.StepLogRequest;
 import com.brijesh.workouttracker.progress.dto.StepLogResponse;
 import com.brijesh.workouttracker.progress.service.StepLogService;
+import com.brijesh.workouttracker.security.RequestClock;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -48,7 +49,7 @@ public class StepLogController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate date
     ) {
-        LocalDate day = date != null ? date : LocalDate.now();
+        LocalDate day = date != null ? date : RequestClock.today();
         StepLogResponse body = stepLogService.getForDate(userId, day);
         return ResponseEntity.ok(body);
     }

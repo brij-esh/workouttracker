@@ -73,14 +73,16 @@
               type="number"
               inputmode="numeric"
               min="0"
+              name="manualSteps"
               [ngModel]="manualSteps()"
-              (ngModelChange)="manualSteps.set($event)"
+              (ngModelChange)="onManualStepsChange($event)"
+              (keydown.enter)="addManualSteps(); $event.preventDefault()"
               placeholder="Enter steps"
               [disabled]="stepsBusy()"
             />
           </label>
-          <button type="button" class="primary" [disabled]="stepsBusy()" (click)="saveManualSteps()">
-            Save
+          <button type="button" class="primary" [disabled]="stepsBusy()" (click)="addManualSteps()">
+            {{ stepsBusy() ? 'Adding…' : 'Add' }}
           </button>
         </div>
         <div class="steps-connect">
@@ -93,7 +95,7 @@
         </div>
         @if (!stepsCapability.nativeBridge) {
           <p class="steps-note muted">
-            Phone HealthKit / Health Connect needs a native app wrapper. Permissions are stored; use Save for now.
+            Phone HealthKit / Health Connect needs a native app wrapper. Permissions are stored; use Add for now.
           </p>
         }
       </div>

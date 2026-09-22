@@ -262,21 +262,65 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  saveManualSteps(): void {
-    const raw = this.manualSteps().trim();
-    const steps = Number(raw);
-    if (!Number.isFinite(steps) || steps < 0) {
+  onManualStepsChange(value: string | number | null): void {
+    if (value == null || value === '') {
+      this.manualSteps.set('');
+      return;
+    }
+    this.manualSteps.set(String(value));
+  }
+
+  addManualSteps(): void {
+    const steps = Number(String(this.manualSteps()).trim());
+    if (!Number.isFinite(steps) || steps < 0 || String(this.manualSteps()).trim() === '') {
       this.toast.error('Enter a valid step count');
       return;
     }
     this.stepsBusy.set(true);
-    void this.saveSteps(Math.round(steps), 'MANUAL', 'Manual')
-      .catch(() => undefined)
-      .finally(() => this.stepsBusy.set(false));
+    this.api
+      .upsertSteps({
+        recordedOn: this.todayKey,
+        steps: Math.round(steps),
+        source: 'MANUAL',
+        sourceLabel: 'Manual',
+        weightKg: this.weightForSteps()
+      })
+      .subscribe({
+        next: (log) => {
+          this.applyStepLog(log);
+          this.toast.success(`Added ${log.steps.toLocaleString()} steps · ${log.caloriesBurned} kcal`);
+          this.stepsBusy.set(false);
+        },
+        error: (err: { error?: { detail?: string; message?: string } }) => {
+          const detail = err?.error?.detail || err?.error?.message;
+          this.toast.error(detail || 'Could not add steps');
+          this.stepsBusy.set(false);
+        }
+      });
   }
 
-  private saveSteps(steps: number, source: StepSource, sourceLabel: string): Promise<void> {
-    const weightKg = this.profile()?.weightKg ?? this.latestWeight()?.weightKg ?? null;
+  private weightForSteps(): number | null {
+    const fromProfile = this.profile()?.weightKg;
+    if (fromProfile != null && Number(fromProfile) > 0) {
+      return Number(fromProfile);
+    }
+    const fromLog = this.latestWeight()?.weightKg;
+    if (fromLog != null && Number(fromLog) > 0) {
+      return Number(fromLog);
+    }
+    return null;
+  }
+
+  private applyStepLog(log: StepLog): void {
+    this.stepsToday.set(log);
+    this.stepHistory.update((rows) => {
+      const rest = rows.filter((r) => r.recordedOn !== log.recordedOn);
+      return [log, ...rest].sort((a, b) => b.recordedOn.localeCompare(a.recordedOn));
+    });
+    this.manualSteps.set(String(log.steps));
+  }
+
+  private async saveSteps(steps: number, source: StepSource, sourceLabel: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.api
         .upsertSteps({
@@ -284,16 +328,11 @@ export class HomeComponent implements OnInit {
           steps,
           source,
           sourceLabel,
-          weightKg: weightKg != null ? Number(weightKg) : null
+          weightKg: this.weightForSteps()
         })
         .subscribe({
           next: (log) => {
-            this.stepsToday.set(log);
-            this.stepHistory.update((rows) => {
-              const rest = rows.filter((r) => r.recordedOn !== log.recordedOn);
-              return [log, ...rest].sort((a, b) => b.recordedOn.localeCompare(a.recordedOn));
-            });
-            this.manualSteps.set(String(log.steps));
+            this.applyStepLog(log);
             this.toast.success(`Steps updated · ${log.caloriesBurned} kcal`);
             resolve();
           },
