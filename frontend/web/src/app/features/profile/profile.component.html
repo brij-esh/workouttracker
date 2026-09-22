@@ -209,7 +209,7 @@
     <div class="region-copy">
       <h2>Region &amp; timezone</h2>
       <p class="muted">
-        Detected from your device:
+        From your device timezone (not GPS):
         <strong>{{ region.detected().label }}</strong>
       </p>
       @if (profile(); as p) {
@@ -226,7 +226,7 @@
       }
     </div>
     <button type="button" class="secondary" [disabled]="detecting()" (click)="detectRegion()">
-      {{ detecting() ? 'Detecting...' : 'Detect location' }}
+      {{ detecting() ? 'Detecting...' : 'Refresh from timezone' }}
     </button>
   </section>
 
@@ -258,7 +258,15 @@
       <label>Height (cm) <input type="number" step="0.1" formControlName="heightCm" /></label>
       <label>Weight (kg) <input type="number" step="0.1" formControlName="weightKg" /></label>
     </div>
-    <label>Date of birth <app-date-input formControlName="dateOfBirth" ariaLabel="Date of birth" /></label>
+    <label>
+      Date of birth
+      <app-date-input
+        formControlName="dateOfBirth"
+        ariaLabel="Date of birth"
+        [min]="dobMin"
+        [max]="dobMax"
+      />
+    </label>
     <div class="row">
       <label
         >Gender

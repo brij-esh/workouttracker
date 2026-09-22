@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+type PanelMode = 'days' | 'months' | 'years';
+
 @Component({
   selector: 'app-date-input',
   standalone: true,
@@ -41,6 +43,9 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   readonly value = signal<string>('');
   readonly viewYear = signal(new Date().getFullYear());
   readonly viewMonth = signal(new Date().getMonth()); // 0-11
+  readonly panelMode = signal<PanelMode>('days');
+  /** First year shown in the years grid (12-year page). */
+  readonly yearPageStart = signal(Math.floor(new Date().getFullYear() / 12) * 12);
   private readonly cvaDisabled = signal(false);
 
   readonly isDisabled = computed(() => this.disabledInput() || this.cvaDisabled());
@@ -86,6 +91,20 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
   };
 
   readonly weekdayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  readonly monthLabels = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
 
   ngOnDestroy(): void {
     document.removeEventListener('scroll', this.onScrollCapture, true);
@@ -99,6 +118,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     if (d) {
       this.viewYear.set(d.getFullYear());
       this.viewMonth.set(d.getMonth());
+      this.yearPageStart.set(Math.floor(d.getFullYear() / 12) * 12);
     }
   }
 
@@ -127,6 +147,8 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     const d = parseIsoDate(this.value()) ?? new Date();
     this.viewYear.set(d.getFullYear());
     this.viewMonth.set(d.getMonth());
+    this.yearPageStart.set(Math.floor(d.getFullYear() / 12) * 12);
+    this.panelMode.set('days');
     this.openPanel();
     this.onTouched();
   }
@@ -216,6 +238,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
 
   private close(): void {
     this.open.set(false);
+    this.panelMode.set('days');
     document.removeEventListener('scroll', this.onScrollCapture, true);
     this.destroyPanel();
   }
@@ -244,7 +267,19 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
       return;
     }
     panel.replaceChildren();
+    const mode = this.panelMode();
+    if (mode === 'years') {
+      this.renderYears(panel);
+      return;
+    }
+    if (mode === 'months') {
+      this.renderMonths(panel);
+      return;
+    }
+    this.renderDays(panel);
+  }
 
+  private renderDays(panel: HTMLDivElement): void {
     const head = document.createElement('div');
     head.className = 'app-date-head';
 
@@ -255,9 +290,16 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     prev.textContent = '‹';
     prev.addEventListener('click', (e) => this.prevMonth(e));
 
-    const title = document.createElement('strong');
+    const title = document.createElement('button');
+    title.type = 'button';
     title.className = 'app-date-title';
+    title.setAttribute('aria-label', 'Choose month and year');
     title.textContent = this.monthTitle();
+    title.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.panelMode.set('months');
+      this.renderPanel();
+    });
 
     const next = document.createElement('button');
     next.type = 'button';
@@ -323,6 +365,161 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     panel.appendChild(foot);
   }
 
+  private renderMonths(panel: HTMLDivElement): void {
+    const head = document.createElement('div');
+    head.className = 'app-date-head';
+
+    const prev = document.createElement('button');
+    prev.type = 'button';
+    prev.className = 'app-date-nav';
+    prev.setAttribute('aria-label', 'Previous year');
+    prev.textContent = '‹';
+    prev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.viewYear.update((y) => y - 1);
+      this.renderPanel();
+    });
+
+    const title = document.createElement('button');
+    title.type = 'button';
+    title.className = 'app-date-title';
+    title.setAttribute('aria-label', 'Choose year');
+    title.textContent = String(this.viewYear());
+    title.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.yearPageStart.set(Math.floor(this.viewYear() / 12) * 12);
+      this.panelMode.set('years');
+      this.renderPanel();
+    });
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'app-date-nav';
+    next.setAttribute('aria-label', 'Next year');
+    next.textContent = '›';
+    next.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.viewYear.update((y) => y + 1);
+      this.renderPanel();
+    });
+
+    head.append(prev, title, next);
+    panel.appendChild(head);
+
+    const hint = document.createElement('p');
+    hint.className = 'app-date-hint';
+    hint.textContent = 'Pick a month';
+    panel.appendChild(hint);
+
+    const grid = document.createElement('div');
+    grid.className = 'app-date-grid app-date-grid-months';
+    const selectedMonth = this.viewMonth();
+    for (let m = 0; m < 12; m++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'app-date-chip';
+      if (m === selectedMonth) {
+        btn.classList.add('selected');
+      }
+      btn.textContent = this.monthLabels[m];
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.viewMonth.set(m);
+        this.panelMode.set('days');
+        this.renderPanel();
+      });
+      grid.appendChild(btn);
+    }
+    panel.appendChild(grid);
+  }
+
+  private renderYears(panel: HTMLDivElement): void {
+    const start = this.yearPageStart();
+    const end = start + 11;
+
+    const head = document.createElement('div');
+    head.className = 'app-date-head';
+
+    const prev = document.createElement('button');
+    prev.type = 'button';
+    prev.className = 'app-date-nav';
+    prev.setAttribute('aria-label', 'Earlier years');
+    prev.textContent = '‹';
+    prev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.yearPageStart.update((y) => y - 12);
+      this.renderPanel();
+    });
+
+    const title = document.createElement('strong');
+    title.className = 'app-date-title static';
+    title.textContent = `${start} – ${end}`;
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'app-date-nav';
+    next.setAttribute('aria-label', 'Later years');
+    next.textContent = '›';
+    next.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.yearPageStart.update((y) => y + 12);
+      this.renderPanel();
+    });
+
+    head.append(prev, title, next);
+    panel.appendChild(head);
+
+    const hint = document.createElement('p');
+    hint.className = 'app-date-hint';
+    hint.textContent = 'Pick a year';
+    panel.appendChild(hint);
+
+    const grid = document.createElement('div');
+    grid.className = 'app-date-grid app-date-grid-years';
+    const selectedYear = this.viewYear();
+    const thisYear = new Date().getFullYear();
+    const minY = this.boundYear('min');
+    const maxY = this.boundYear('max');
+
+    for (let y = start; y <= end; y++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'app-date-chip';
+      if (y === selectedYear) {
+        btn.classList.add('selected');
+      }
+      if (y === thisYear) {
+        btn.classList.add('today');
+      }
+      const out = (minY != null && y < minY) || (maxY != null && y > maxY);
+      if (out) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+      }
+      btn.textContent = String(y);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (out) {
+          return;
+        }
+        this.viewYear.set(y);
+        this.panelMode.set('months');
+        this.renderPanel();
+      });
+      grid.appendChild(btn);
+    }
+    panel.appendChild(grid);
+  }
+
+  private boundYear(kind: 'min' | 'max'): number | null {
+    const raw = kind === 'min' ? this.min() : this.max();
+    if (!raw) {
+      return null;
+    }
+    const d = parseIsoDate(raw);
+    return d ? d.getFullYear() : null;
+  }
+
   private isOutOfRange(iso: string): boolean {
     const min = this.min();
     const max = this.max();
@@ -351,7 +548,7 @@ export class DateInputComponent implements ControlValueAccessor, OnDestroy {
     const spaceBelow = window.innerHeight - rect.bottom - pad;
     const spaceAbove = rect.top - pad;
     const openUp = spaceBelow < 320 && spaceAbove > spaceBelow;
-    const maxHeight = Math.min(380, openUp ? spaceAbove - 6 : spaceBelow - 6);
+    const maxHeight = Math.min(420, openUp ? spaceAbove - 6 : spaceBelow - 6);
 
     panel.style.cssText = [
       'position:fixed',
@@ -397,7 +594,6 @@ function toIsoDate(date: Date): string {
 
 function buildCalendarWeeks(year: number, month: number): CalCell[][] {
   const first = new Date(year, month, 1);
-  // Monday-first index
   const startOffset = (first.getDay() + 6) % 7;
   const start = new Date(year, month, 1 - startOffset);
   const weeks: CalCell[][] = [];

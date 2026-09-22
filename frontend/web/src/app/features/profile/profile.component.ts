@@ -46,6 +46,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   readonly cropSrc = signal<string | null>(null);
   readonly photoBusy = signal(false);
 
+  /** DOB: allow ~100 years back through today. */
+  readonly dobMax = this.localDateKey();
+  readonly dobMin = this.shiftYears(this.dobMax, -100);
+
   readonly editingEmail = signal(false);
   readonly emailBusy = signal(false);
   readonly emailMessage = signal<string | null>(null);
@@ -509,5 +513,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return err.message;
     }
     return fallback;
+  }
+
+  private localDateKey(date = new Date()): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private shiftYears(iso: string, years: number): string {
+    const [y, m, d] = iso.split('-').map(Number);
+    const date = new Date(y + years, m - 1, d);
+    return this.localDateKey(date);
   }
 }
