@@ -34,6 +34,7 @@ import {
   WeightLogRequest,
   WeightGoalRequest,
   BodyWeightProgress,
+  Weekday,
   Workout,
   WorkoutConsistency,
   WorkoutExercise,
@@ -282,9 +283,13 @@ export class ApiService {
       .pipe(tap((plan) => this.afterPlanWrite(plan)));
   }
 
-  seedWorkoutPlanTemplate(templateType: PlanTemplateType): Observable<WorkoutPlan> {
+  seedWorkoutPlanTemplate(
+    templateType: PlanTemplateType,
+    restWeekday?: Weekday | null
+  ): Observable<WorkoutPlan> {
+    const params = restWeekday ? `?restWeekday=${restWeekday}` : '';
     return this.http
-      .post<WorkoutPlan>(`${this.base}/workout-plans/templates/${templateType}`, {})
+      .post<WorkoutPlan>(`${this.base}/workout-plans/templates/${templateType}${params}`, {})
       .pipe(tap((plan) => this.afterPlanWrite(plan)));
   }
 

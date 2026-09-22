@@ -469,13 +469,14 @@ nav a.active .nav-icon {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Scroll clear of the fixed bottom nav; keep left/right padding even. */
-    padding: 0.75rem 0.75rem calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+    /* Scroll clear of fixed bottom nav + home-screen safe area. */
+    padding: 0.75rem 0.75rem
+      calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 2.75rem);
   }
 
   .shell.has-workout-fab .content {
-    /* Extra room so the docked timer chip does not cover set actions. */
-    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 4.25rem);
+    /* Extra room so docked timer + nav never cover primary actions. */
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 5.5rem);
   }
 
   .content > :not(.sync-banner) {

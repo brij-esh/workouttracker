@@ -150,44 +150,47 @@
                       type="checkbox"
                       [checked]="set.completed"
                       (change)="toggleComplete(ex, set)"
-                    />
-                    <span class="set-num">{{ set.setNumber }}</span>
-                  </label>
-                  <label class="field field-reps">
-                    <span class="field-label">Reps</span>
-                    <input
-                      type="number"
-                      inputmode="numeric"
-                      min="1"
-                      [value]="set.reps ?? ''"
-                      (change)="updateSetField(ex, set, 'reps', $any($event.target).value)"
-                      aria-label="Reps"
+                      [attr.aria-label]="'Complete set ' + set.setNumber"
                     />
                   </label>
-                  <label class="field field-kg">
-                    <span class="field-label">kg</span>
-                    <input
-                      type="number"
-                      inputmode="decimal"
-                      min="0"
-                      step="0.5"
-                      [value]="set.weightKg ?? ''"
-                      (change)="updateSetField(ex, set, 'weightKg', $any($event.target).value)"
-                      aria-label="Weight kg"
-                    />
-                  </label>
-                  <label class="field field-rest">
-                    <span class="field-label">Rest</span>
-                    <input
-                      type="number"
-                      inputmode="numeric"
-                      min="0"
-                      [value]="set.restSeconds ?? 90"
-                      (change)="updateSetField(ex, set, 'restSeconds', $any($event.target).value)"
-                      title="Rest seconds"
-                      aria-label="Rest seconds"
-                    />
-                  </label>
+                  <span class="set-num" aria-hidden="true">{{ set.setNumber }}</span>
+                  <div class="set-fields">
+                    <label class="field">
+                      <span class="field-label">Reps</span>
+                      <input
+                        type="number"
+                        inputmode="numeric"
+                        min="1"
+                        [value]="set.reps ?? ''"
+                        (change)="updateSetField(ex, set, 'reps', $any($event.target).value)"
+                        aria-label="Reps"
+                      />
+                    </label>
+                    <label class="field">
+                      <span class="field-label">kg</span>
+                      <input
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        step="0.5"
+                        [value]="set.weightKg ?? ''"
+                        (change)="updateSetField(ex, set, 'weightKg', $any($event.target).value)"
+                        aria-label="Weight kg"
+                      />
+                    </label>
+                    <label class="field">
+                      <span class="field-label">Rest</span>
+                      <input
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        [value]="set.restSeconds ?? 90"
+                        (change)="updateSetField(ex, set, 'restSeconds', $any($event.target).value)"
+                        title="Rest seconds"
+                        aria-label="Rest seconds"
+                      />
+                    </label>
+                  </div>
                   <div class="set-actions">
                     <button type="button" class="ghost tiny" (click)="startRest(ex, set)">Rest</button>
                     <button type="button" class="ghost tiny danger" (click)="removeSet(ex, set)">Remove</button>
@@ -207,6 +210,12 @@
         </div>
       }
     </section>
+
+    @if (canEdit()) {
+      <div class="mobile-add-bar">
+        <button type="button" class="primary" (click)="openAddModal()">Add exercise</button>
+      </div>
+    }
   }
 </section>
 

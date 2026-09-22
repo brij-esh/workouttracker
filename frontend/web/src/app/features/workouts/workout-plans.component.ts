@@ -16,6 +16,16 @@ const WEEKDAY_SHORT: Record<Weekday, string> = {
   SUNDAY: 'Sun'
 };
 
+const WEEKDAYS: Weekday[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY'
+];
+
 @Component({
   selector: 'app-workout-plans',
   standalone: true,
@@ -33,6 +43,10 @@ export class WorkoutPlansComponent implements OnInit {
   readonly plans = signal<WorkoutPlan[]>([]);
   readonly error = signal<string | null>(null);
   readonly seeding = signal(false);
+  readonly pendingTemplate = signal<Exclude<PlanTemplateType, 'CUSTOM'> | null>(null);
+  readonly restPick = signal<Weekday>('SUNDAY');
+  readonly weekdayOptions = WEEKDAYS;
+  readonly weekdayShort = WEEKDAY_SHORT;
 
   readonly templates: Array<{
     type: Exclude<PlanTemplateType, 'CUSTOM'>;
@@ -44,7 +58,7 @@ export class WorkoutPlansComponent implements OnInit {
       type: 'PPL',
       name: 'Push / Pull / Legs',
       meta: '6 days · intermediate',
-      description: 'Classic hypertrophy split with Sunday as the rest day.'
+      description: '6 training days — you choose which weekday is rest.'
     },
     {
       type: 'UPPER_LOWER',
@@ -90,11 +104,25 @@ export class WorkoutPlansComponent implements OnInit {
     });
   }
 
-  seed(template: PlanTemplateType): void {
+  openSeedPicker(template: Exclude<PlanTemplateType, 'CUSTOM'>): void {
+    this.pendingTemplate.set(template);
+    this.restPick.set('SUNDAY');
+  }
+
+  cancelSeedPicker(): void {
+    this.pendingTemplate.set(null);
+  }
+
+  confirmSeed(): void {
+    const template = this.pendingTemplate();
+    if (!template || this.seeding()) {
+      return;
+    }
     this.seeding.set(true);
-    this.api.seedWorkoutPlanTemplate(template).subscribe({
+    this.api.seedWorkoutPlanTemplate(template, this.restPick()).subscribe({
       next: (plan) => {
         this.seeding.set(false);
+        this.pendingTemplate.set(null);
         this.toast.success(`${plan.name} added`);
         this.reload();
         void this.router.navigate(['/app/workouts/plans', plan.id]);
@@ -207,14 +235,13 @@ export class WorkoutPlansComponent implements OnInit {
 
 function currentWeekday(): Weekday {
   const map: Weekday[] = [
+    'SUNDAY',
     'MONDAY',
     'TUESDAY',
     'WEDNESDAY',
     'THURSDAY',
     'FRIDAY',
-    'SATURDAY',
-    'SUNDAY'
+    'SATURDAY'
   ];
-  const js = new Date().getDay();
-  return map[js === 0 ? 6 : js - 1];
+  return map[new Date().getDay()];
 }

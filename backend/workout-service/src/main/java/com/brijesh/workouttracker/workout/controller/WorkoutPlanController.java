@@ -1,6 +1,7 @@
 package com.brijesh.workouttracker.workout.controller;
 
 import com.brijesh.workouttracker.workout.domain.PlanTemplateType;
+import com.brijesh.workouttracker.workout.domain.Weekday;
 import com.brijesh.workouttracker.workout.dto.CreateWorkoutPlanRequest;
 import com.brijesh.workouttracker.workout.dto.StartPlanDayRequest;
 import com.brijesh.workouttracker.workout.dto.UpdatePlanScheduleRequest;
@@ -52,11 +53,12 @@ public class WorkoutPlanController {
     @PostMapping("/templates/{templateType}")
     public ResponseEntity<WorkoutPlanResponse> seedTemplate(
             @RequestHeader("X-User-Id") String userId,
-            @PathVariable PlanTemplateType templateType
+            @PathVariable PlanTemplateType templateType,
+            @RequestParam(required = false) Weekday restWeekday
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(workoutPlanService.seedTemplate(userId, templateType));
+                .body(workoutPlanService.seedTemplate(userId, templateType, restWeekday));
     }
 
     @PutMapping("/{planId}")

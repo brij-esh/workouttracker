@@ -71,7 +71,7 @@
           <span class="muted">Saving…</span>
         }
       </div>
-      <p class="hint">Map each weekday to a training day or Rest — reusable every week.</p>
+      <p class="hint">Tap a weekday and set it to Rest — or assign any training day. Changes apply every week.</p>
       <div class="week-grid">
         @for (slot of p.schedule; track slot.weekday) {
           <label class="week-slot" [class.today]="slot.weekday === todayWeekday()" [class.rest]="slot.restDay">

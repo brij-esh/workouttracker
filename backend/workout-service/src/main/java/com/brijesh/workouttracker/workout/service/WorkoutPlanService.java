@@ -86,17 +86,24 @@ public class WorkoutPlanService {
     }
 
     @Transactional
-    public WorkoutPlanResponse seedTemplate(String userId, PlanTemplateType templateType) {
+    public WorkoutPlanResponse seedTemplate(
+            String userId,
+            PlanTemplateType templateType,
+            Weekday preferredRestDay
+    ) {
         if (templateType == PlanTemplateType.CUSTOM) {
             throw new WorkoutBadRequestException("Use create for custom plans");
         }
+
+        List<CreateWorkoutPlanRequest.ScheduleSlotRequest> schedule =
+                withPreferredRestDay(defaultScheduleFor(templateType), preferredRestDay);
 
         CreateWorkoutPlanRequest request = new CreateWorkoutPlanRequest(
                 templateName(templateType),
                 templateType,
                 templateDescription(templateType),
                 defaultDaysFor(templateType),
-                defaultScheduleFor(templateType)
+                schedule
         );
         return create(userId, request);
     }
@@ -544,6 +551,52 @@ public class WorkoutPlanService {
             );
             case CUSTOM -> new ArrayList<>();
         };
+    }
+
+    private List<CreateWorkoutPlanRequest.ScheduleSlotRequest> withPreferredRestDay(
+            List<CreateWorkoutPlanRequest.ScheduleSlotRequest> schedule,
+            Weekday preferredRestDay
+    ) {
+        if (preferredRestDay == null || schedule.isEmpty()) {
+            return schedule;
+        }
+
+        CreateWorkoutPlanRequest.ScheduleSlotRequest preferred = schedule.stream()
+                .filter(s -> s.weekday() == preferredRestDay)
+                .findFirst()
+                .orElse(null);
+        if (preferred == null) {
+            return schedule;
+        }
+        // Already a rest day.
+        if (preferred.dayLabel() == null) {
+            return schedule;
+        }
+
+        CreateWorkoutPlanRequest.ScheduleSlotRequest donorRest = schedule.stream()
+                .filter(s -> s.dayLabel() == null)
+                .findFirst()
+                .orElse(null);
+        if (donorRest == null) {
+            // No rest slot in template — turn preferred into rest only.
+            return schedule.stream()
+                    .map(s -> s.weekday() == preferredRestDay ? slot(preferredRestDay, null) : s)
+                    .toList();
+        }
+
+        String movedLabel = preferred.dayLabel();
+        Weekday donorDay = donorRest.weekday();
+        return schedule.stream()
+                .map(s -> {
+                    if (s.weekday() == preferredRestDay) {
+                        return slot(preferredRestDay, null);
+                    }
+                    if (s.weekday() == donorDay) {
+                        return slot(donorDay, movedLabel);
+                    }
+                    return s;
+                })
+                .toList();
     }
 
     private List<CreateWorkoutPlanRequest.ScheduleSlotRequest> defaultScheduleFor(PlanTemplateType type) {
