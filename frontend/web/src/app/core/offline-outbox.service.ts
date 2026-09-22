@@ -52,16 +52,10 @@ export class OfflineOutboxService {
     queueMicrotask(() => void this.flush());
   }
 
+  /** CORS-safe reachability probe (actuator/health is outside gateway CORS). */
   healthUrl(): string {
-    const base = environment.apiBaseUrl;
-    if (/^https?:\/\//i.test(base)) {
-      try {
-        return `${new URL(base).origin}/actuator/health`;
-      } catch {
-        /* fall through */
-      }
-    }
-    return '/actuator/health';
+    const base = environment.apiBaseUrl.replace(/\/$/, '');
+    return `${base}/users/me`;
   }
 
   async isServerReachable(): Promise<boolean> {
@@ -70,18 +64,16 @@ export class OfflineOutboxService {
       return false;
     }
     try {
-      const res = await fetch(this.healthUrl(), {
+      // Any HTTP response (incl. 401) means the gateway answered.
+      // Network / CORS failures throw and mean unreachable.
+      await fetch(this.healthUrl(), {
         method: 'GET',
         cache: 'no-store',
-        credentials: 'omit'
+        credentials: 'omit',
+        headers: { Accept: 'application/json' }
       });
-      if (!res.ok) {
-        return false;
-      }
-      const body = (await res.json().catch(() => null)) as { status?: string } | null;
-      const up = !body?.status || body.status === 'UP';
-      this.offline.set(!up);
-      return up;
+      this.offline.set(false);
+      return true;
     } catch {
       this.offline.set(true);
       return false;
