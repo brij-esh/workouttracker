@@ -3,28 +3,29 @@ import { ActiveWorkoutSession, ActiveWorkoutSessionService } from './active-work
 import { APP_BRAND } from './app-brand';
 
 const NOTIF_TAG = 'wt.active-workout';
-/** How often to refresh the shade while the timer is running (not every second). */
-const REFRESH_MS = 60_000;
 
 /**
- * Shows one OS notification for an active workout and updates it sparingly
- * (start / pause / resume / every minute) so the shade is not spammed.
- * The browser tab title still shows a live clock.
+ * One quiet OS notification for an active workout.
+ * Posted only on start / pause / resume / end — never on every timer tick.
+ * Live time stays in the top-bar chip only.
  */
 @Injectable({ providedIn: 'root' })
 export class WorkoutOsNotificationService {
   private readonly session = inject(ActiveWorkoutSessionService);
-  private lastPostedAt = 0;
   private lastPaused: boolean | null = null;
   private lastWorkoutId: string | null = null;
   private current: Notification | null = null;
+  private baseTitle = APP_BRAND.name;
 
   constructor() {
+    if (typeof document !== 'undefined') {
+      this.baseTitle = document.title || APP_BRAND.name;
+    }
     effect(() => {
       const active = this.session.active();
-      const display = this.session.display();
       const paused = this.session.isPaused();
-      untracked(() => this.sync(active, display, paused));
+      // Do not depend on display()/elapsed — that ticks every second.
+      untracked(() => this.sync(active, paused));
     });
   }
 
@@ -43,36 +44,32 @@ export class WorkoutOsNotificationService {
     }
   }
 
-  private sync(active: ActiveWorkoutSession | null, display: string, paused: boolean): void {
+  private sync(active: ActiveWorkoutSession | null, paused: boolean): void {
     if (!active) {
       this.clear();
-      if (typeof document !== 'undefined') {
-        document.title = APP_BRAND.name;
-      }
       return;
     }
 
+    const statusChanged = this.lastPaused !== paused;
+    const workoutChanged = this.lastWorkoutId !== active.workoutId;
+    if (!statusChanged && !workoutChanged) {
+      return;
+    }
+
+    this.lastPaused = paused;
+    this.lastWorkoutId = active.workoutId;
+
     if (typeof document !== 'undefined') {
-      document.title = `⏱ ${display} · ${active.title}`;
+      document.title = paused
+        ? `${APP_BRAND.name} · Paused`
+        : `${APP_BRAND.name} · Workout`;
     }
 
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
       return;
     }
 
-    const now = Date.now();
-    const statusChanged = this.lastPaused !== paused;
-    const workoutChanged = this.lastWorkoutId !== active.workoutId;
-    const dueForRefresh = now - this.lastPostedAt >= REFRESH_MS;
-    const firstPost = this.lastPostedAt === 0;
-
-    if (!firstPost && !statusChanged && !workoutChanged && !dueForRefresh) {
-      return;
-    }
-
-    this.lastPaused = paused;
-    this.lastWorkoutId = active.workoutId;
-    this.lastPostedAt = now;
+    const display = this.session.display();
     this.post(active, display, paused);
   }
 
@@ -80,7 +77,7 @@ export class WorkoutOsNotificationService {
     const status = paused ? 'Paused' : 'In progress';
     const body = paused
       ? `${active.title} · paused at ${display}`
-      : `${active.title} · ${display} (updates every min)`;
+      : `${active.title} · started · open app for live timer`;
 
     try {
       this.current?.close();
@@ -116,7 +113,6 @@ export class WorkoutOsNotificationService {
   }
 
   private clear(): void {
-    this.lastPostedAt = 0;
     this.lastPaused = null;
     this.lastWorkoutId = null;
     try {
@@ -125,5 +121,8 @@ export class WorkoutOsNotificationService {
       /* ignore */
     }
     this.current = null;
+    if (typeof document !== 'undefined') {
+      document.title = this.baseTitle || APP_BRAND.name;
+    }
   }
 }
