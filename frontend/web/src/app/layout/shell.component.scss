@@ -326,6 +326,22 @@ nav a.active .nav-icon {
   min-width: 0;
 }
 
+/* Desktop: zero-size fixed host; FAB inside stays viewport-fixed. */
+.session-dock {
+  position: fixed;
+  inset: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.session-dock app-active-workout-fab,
+.session-dock .fab-card {
+  pointer-events: auto;
+}
+
 @media (max-width: 1024px) and (min-width: 768px) {
   .shell {
     --rail-width: 200px;
@@ -354,15 +370,21 @@ nav a.active .nav-icon {
     max-height: 100%;
     overflow: hidden;
     padding-bottom: 0;
-    /* Extra gap so last controls clear the fixed bottom nav on phones/PWA. */
-    --content-bottom-gap: 1.75rem;
-    --bottom-nav-clearance: calc(
-      var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + var(--content-bottom-gap)
+    /*
+      Bottom nav sits in flex flow (not fixed overlay), so main content
+      cannot scroll underneath it. Extra gap is only breathing room.
+    */
+    --content-bottom-gap: 1.25rem;
+    --bottom-nav-chrome: calc(
+      var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)
     );
+    /* For fixed overlays (FAB, toasts, sheets) that still need viewport offset. */
+    --app-bottom-inset: var(--bottom-nav-chrome);
   }
 
   .shell.has-workout-fab {
-    --content-bottom-gap: 4.25rem;
+    /* Session chip sits in-flow above the nav — no extra scroll padding needed. */
+    --content-bottom-gap: 1.25rem;
   }
 
   .topbar {
@@ -377,20 +399,71 @@ nav a.active .nav-icon {
     display: none;
   }
 
+  .content {
+    grid-column: auto;
+    grid-row: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* Nav is in-flow below; only need a small end gap for last buttons. */
+    padding: 0.75rem 0.75rem calc(0.75rem + var(--content-bottom-gap));
+  }
+
+  .content > :not(.sync-banner) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* In-flow above the bottom nav so it cannot cover tab bar on iPhone. */
+  .session-dock {
+    position: relative;
+    inset: auto;
+    display: block;
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+    pointer-events: auto;
+    background: transparent;
+    z-index: 45;
+  }
+
+  .session-dock:not(.active) {
+    display: none;
+  }
+
+  .session-dock.active {
+    padding: 0.35rem 0.65rem 0.4rem;
+    border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+  }
+
   .rail {
-    position: fixed;
+    position: relative;
     z-index: 50;
     grid-column: auto;
     grid-row: auto;
     top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: auto;
+    right: auto;
+    bottom: auto;
     width: 100%;
     max-width: none;
     height: auto !important;
-    max-height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
-    flex: none;
+    min-height: calc(3.6rem + 0.6rem + env(safe-area-inset-bottom, 0px));
+    max-height: none;
+    flex: 0 0 auto;
     flex-direction: row;
     align-items: center;
     gap: 0;
@@ -400,6 +473,7 @@ nav a.active .nav-icon {
     background: color-mix(in srgb, var(--panel) 96%, transparent);
     overflow: hidden;
     backdrop-filter: blur(14px);
+    box-shadow: 0 -8px 24px color-mix(in srgb, var(--bg) 55%, transparent);
   }
 
   nav {
@@ -464,50 +538,26 @@ nav a.active .nav-icon {
     background: var(--accent);
     transform: translateX(-50%);
   }
-
-  .content {
-    grid-column: auto;
-    grid-row: auto;
-    flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
-    width: 100%;
-    height: auto;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    /* Scroll clear of fixed bottom nav + home-screen safe area. */
-    padding: 0.75rem 0.75rem var(--bottom-nav-clearance);
-  }
-
-  .content > :not(.sync-banner) {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
 }
 
 @media (max-width: 540px) {
   .shell {
-    --content-bottom-gap: 2.25rem;
+    --content-bottom-gap: 1.5rem;
   }
 
   .shell.has-workout-fab {
-    --content-bottom-gap: 4.75rem;
+    --content-bottom-gap: 1.5rem;
   }
 }
 
 @media (max-width: 420px) {
   .shell {
     --bottom-nav-h: 4.6rem;
-    --content-bottom-gap: 2.5rem;
+    --content-bottom-gap: 1.75rem;
   }
 
   .shell.has-workout-fab {
-    --content-bottom-gap: 5rem;
+    --content-bottom-gap: 1.75rem;
   }
 
   .brand-text strong {

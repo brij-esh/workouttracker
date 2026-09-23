@@ -293,12 +293,14 @@ textarea {
 @media (max-width: 560px) {
   .modal {
     top: auto;
-    bottom: 0;
+    bottom: var(--app-bottom-inset, 0px);
     left: 0;
     right: 0;
     transform: none;
     width: 100%;
+    max-height: calc(92dvh - var(--app-bottom-inset, 0px));
     border-radius: 1.1rem 1.1rem 0 0;
+    padding-bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px));
   }
 
   .modal .row {

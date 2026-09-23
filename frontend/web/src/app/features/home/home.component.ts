@@ -93,8 +93,20 @@ export class HomeComponent implements OnInit {
     this.weekWorkouts().reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0)
   );
 
-  readonly weekCalories = computed(() =>
+  readonly weekWorkoutCalories = computed(() =>
     this.weekWorkouts().reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0)
+  );
+
+  readonly weekStepCalories = computed(() => {
+    const startKey = this.toDateKey(this.startOfWeek(this.today));
+    return this.stepHistory()
+      .filter((s) => s.recordedOn >= startKey && s.recordedOn <= this.todayKey)
+      .reduce((sum, s) => sum + (s.caloriesBurned ?? 0), 0);
+  });
+
+  /** Workouts + steps for the current week. */
+  readonly weekCalories = computed(
+    () => this.weekWorkoutCalories() + this.weekStepCalories()
   );
 
   readonly todayCalories = computed(() =>
@@ -230,12 +242,37 @@ export class HomeComponent implements OnInit {
   }
 
   addManualSteps(): void {
-    const added = Number(String(this.manualSteps()).trim());
-    if (!Number.isFinite(added) || added <= 0 || String(this.manualSteps()).trim() === '') {
-      this.toast.error('Enter steps to add');
+    this.adjustManualSteps(1);
+  }
+
+  removeManualSteps(): void {
+    this.adjustManualSteps(-1);
+  }
+
+  /** deltaSign +1 adds to today’s total; −1 subtracts (floors at 0). */
+  private adjustManualSteps(deltaSign: 1 | -1): void {
+    const raw = String(this.manualSteps()).trim();
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount <= 0 || raw === '') {
+      this.toast.error(deltaSign > 0 ? 'Enter steps to add' : 'Enter steps to remove');
       return;
     }
-    const total = this.todaySteps() + Math.round(added);
+    const delta = Math.round(amount) * deltaSign;
+    const current = this.todaySteps();
+    if (delta < 0 && current <= 0) {
+      this.toast.error('No steps to remove today');
+      return;
+    }
+    const total = Math.max(0, current + delta);
+    const applied = total - current;
+    if (applied === 0) {
+      this.toast.error(
+        delta < 0
+          ? `Can only remove up to ${current.toLocaleString()} steps`
+          : 'Nothing to change'
+      );
+      return;
+    }
     this.stepsBusy.set(true);
     this.api
       .upsertSteps({
@@ -250,12 +287,15 @@ export class HomeComponent implements OnInit {
           this.applyStepLog(log);
           this.manualSteps.set('');
           this.addingSteps.set(false);
-          this.toast.success(`Added ${Math.round(added).toLocaleString()} steps · ${log.caloriesBurned} kcal today`);
+          const verb = applied > 0 ? 'Added' : 'Removed';
+          this.toast.success(
+            `${verb} ${Math.abs(applied).toLocaleString()} steps · ${log.caloriesBurned} kcal today`
+          );
           this.stepsBusy.set(false);
         },
         error: (err: { error?: { detail?: string; message?: string } }) => {
           const detail = err?.error?.detail || err?.error?.message;
-          this.toast.error(detail || 'Could not add steps');
+          this.toast.error(detail || (deltaSign > 0 ? 'Could not add steps' : 'Could not remove steps'));
           this.stepsBusy.set(false);
         }
       });

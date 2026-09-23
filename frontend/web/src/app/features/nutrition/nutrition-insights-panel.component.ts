@@ -18,7 +18,7 @@ import {
         [attr.aria-expanded]="open()"
       >
         <div class="head-copy">
-          <p class="eyebrow">Nutrition × body × training</p>
+          <p class="eyebrow">Nutrition × body × training × steps</p>
           <h2>
             <span class="chevron" aria-hidden="true">{{ open() ? '▾' : '▸' }}</span>
             Last {{ analytics()?.windowWeeks ?? weeks }} weeks
@@ -76,7 +76,29 @@ import {
             <div class="stat">
               <span class="label">Workouts</span>
               <span class="value">{{ a.workouts }}</span>
-              <span class="unit">completed</span>
+              <span class="unit">{{ a.workoutCaloriesBurned | number: '1.0-0' }} kcal burned</span>
+            </div>
+            <div class="stat">
+              <span class="label">Avg steps</span>
+              <span class="value">
+                @if (a.avgDailySteps != null) {
+                  {{ a.avgDailySteps | number: '1.0-0' }}
+                } @else {
+                  —
+                }
+              </span>
+              <span class="unit">
+                @if (a.daysWithSteps > 0) {
+                  {{ a.stepCaloriesBurned | number: '1.0-0' }} kcal from steps
+                } @else {
+                  no step logs
+                }
+              </span>
+            </div>
+            <div class="stat">
+              <span class="label">Total burned</span>
+              <span class="value">{{ a.totalCaloriesBurned | number: '1.0-0' }}</span>
+              <span class="unit">workouts + steps</span>
             </div>
             <div class="stat">
               <span class="label">Strength trend</span>
@@ -156,7 +178,7 @@ import {
     .error { margin: 0; color: var(--danger, #c44); }
     .stat-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
       gap: 0.65rem;
     }
     .stat {

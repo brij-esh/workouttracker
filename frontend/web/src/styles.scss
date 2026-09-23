@@ -19,6 +19,8 @@ html[data-theme='dark'] {
   --font-body: "DM Sans", sans-serif;
   --page-gap: clamp(0.85rem, 2vw, 1.25rem);
   --touch: 2.75rem;
+  /* Overridden on small screens for fixed overlays above the bottom nav. */
+  --app-bottom-inset: 0px;
 }
 
 html[data-theme='light'] {
@@ -71,6 +73,18 @@ app-root {
   height: 100%;
   max-height: 100%;
   touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --app-bottom-inset: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --app-bottom-inset: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 img,

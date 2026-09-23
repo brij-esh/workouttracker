@@ -112,7 +112,7 @@ import { ToastService } from './toast.service';
 
       @media (max-width: 767px) {
         .toast-host {
-          bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+          bottom: calc(var(--app-bottom-inset, 4.35rem) + 0.75rem);
           left: 50%;
           right: auto;
           transform: translateX(-50%);

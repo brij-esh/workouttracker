@@ -5,6 +5,7 @@ import { ApiService } from './api.service';
 import {
   Meal,
   StrengthExerciseSummary,
+  StepLog,
   WaterLog,
   WeightLog,
   Workout
@@ -28,6 +29,13 @@ export interface NutritionProgressAnalytics {
   endingWeightKg: number | null;
   weighIns: number;
   workouts: number;
+  workoutCaloriesBurned: number;
+  totalSteps: number;
+  daysWithSteps: number;
+  avgDailySteps: number | null;
+  stepCaloriesBurned: number;
+  avgDailyStepCalories: number | null;
+  totalCaloriesBurned: number;
   strengthTrend: 'up' | 'flat' | 'down' | 'unknown';
   strengthExercisesWithProgression: number;
   insights: NutritionProgressInsight[];
@@ -49,10 +57,11 @@ export class NutritionProgressAnalyticsService {
       workouts: this.api.listWorkouts().pipe(catchError(() => of([] as Workout[]))),
       strength: this.api.listStrengthProgress().pipe(
         catchError(() => of([] as StrengthExerciseSummary[]))
-      )
+      ),
+      steps: this.api.listStepLogs({ from, to }).pipe(catchError(() => of([] as StepLog[])))
     }).pipe(
-      map(({ meals, water, weights, workouts, strength }) =>
-        this.build(weeks, from, to, meals, water, weights, workouts, strength)
+      map(({ meals, water, weights, workouts, strength, steps }) =>
+        this.build(weeks, from, to, meals, water, weights, workouts, strength, steps)
       )
     );
   }
@@ -65,7 +74,8 @@ export class NutritionProgressAnalyticsService {
     water: WaterLog[],
     weights: WeightLog[],
     workouts: Workout[],
-    strength: StrengthExerciseSummary[]
+    strength: StrengthExerciseSummary[],
+    steps: StepLog[]
   ): NutritionProgressAnalytics {
     const mealDays = new Map<string, { calories: number; protein: number }>();
     for (const m of meals) {
@@ -123,7 +133,7 @@ export class NutritionProgressAnalyticsService {
         ? Math.round((endingWeightKg - startingWeightKg) * 10) / 10
         : null;
 
-    const workoutCount = workouts.filter((w) => {
+    const windowWorkouts = workouts.filter((w) => {
       if (w.archived) {
         return false;
       }
@@ -131,7 +141,25 @@ export class NutritionProgressAnalyticsService {
         return false;
       }
       return !w.status || w.status === 'COMPLETED';
-    }).length;
+    });
+    const workoutCount = windowWorkouts.length;
+    const workoutCaloriesBurned = windowWorkouts.reduce(
+      (sum, w) => sum + (Number(w.caloriesBurned) || 0),
+      0
+    );
+
+    const windowSteps = steps.filter((s) => s.recordedOn >= from && s.recordedOn <= to);
+    const daysWithSteps = windowSteps.length;
+    const totalSteps = windowSteps.reduce((sum, s) => sum + (Number(s.steps) || 0), 0);
+    const stepCaloriesBurned = windowSteps.reduce(
+      (sum, s) => sum + (Number(s.caloriesBurned) || 0),
+      0
+    );
+    const avgDailySteps =
+      daysWithSteps > 0 ? Math.round(totalSteps / daysWithSteps) : null;
+    const avgDailyStepCalories =
+      daysWithSteps > 0 ? Math.round(stepCaloriesBurned / daysWithSteps) : null;
+    const totalCaloriesBurned = workoutCaloriesBurned + stepCaloriesBurned;
 
     const progressing = strength.filter((s) => s.progressionInsight?.detected).length;
     const declining = strength.filter((s) => {
@@ -157,7 +185,12 @@ export class NutritionProgressAnalyticsService {
       workoutCount,
       strengthTrend,
       daysWithMeals,
-      weighIns: windowWeights.length
+      weighIns: windowWeights.length,
+      totalSteps,
+      daysWithSteps,
+      avgDailySteps,
+      stepCaloriesBurned,
+      totalCaloriesBurned
     });
 
     return {
@@ -173,11 +206,18 @@ export class NutritionProgressAnalyticsService {
       endingWeightKg,
       weighIns: windowWeights.length,
       workouts: workoutCount,
+      workoutCaloriesBurned,
+      totalSteps,
+      daysWithSteps,
+      avgDailySteps,
+      stepCaloriesBurned,
+      avgDailyStepCalories,
+      totalCaloriesBurned,
       strengthTrend,
       strengthExercisesWithProgression: progressing,
       insights,
       disclaimer:
-        'These notes describe how your logged nutrition, body weight, and training moved over the same period. They show coincidence in the data, not proof that one caused the other.'
+        'These notes describe how your logged nutrition, body weight, training, and steps moved over the same period. They show coincidence in the data, not proof that one caused the other.'
     };
   }
 
@@ -190,6 +230,11 @@ export class NutritionProgressAnalyticsService {
     strengthTrend: NutritionProgressAnalytics['strengthTrend'];
     daysWithMeals: number;
     weighIns: number;
+    totalSteps: number;
+    daysWithSteps: number;
+    avgDailySteps: number | null;
+    stepCaloriesBurned: number;
+    totalCaloriesBurned: number;
   }): NutritionProgressInsight[] {
     const insights: NutritionProgressInsight[] = [];
     const w = input.weeks;
@@ -227,6 +272,13 @@ export class NutritionProgressAnalyticsService {
       });
     }
 
+    if (input.daysWithSteps > 0 && input.avgDailySteps != null) {
+      insights.push({
+        code: 'STEPS_BURN',
+        message: `Steps averaged ~${input.avgDailySteps.toLocaleString()}/day across ${input.daysWithSteps} logged days (~${input.stepCaloriesBurned.toLocaleString()} kcal from walking). Combined with workouts, estimated burn in this window is ~${input.totalCaloriesBurned.toLocaleString()} kcal.`
+      });
+    }
+
     if (input.daysWithMeals < Math.max(7, Math.floor(w * 2))) {
       insights.push({
         code: 'SPARSE_NUTRITION',
@@ -237,7 +289,7 @@ export class NutritionProgressAnalyticsService {
     if (!insights.length) {
       insights.push({
         code: 'NEED_MORE_DATA',
-        message: `Log meals, weight, and workouts over a few more weeks to see how nutrition and progress line up in your data.`
+        message: `Log meals, weight, workouts, and steps over a few more weeks to see how nutrition and progress line up in your data.`
       });
     }
 

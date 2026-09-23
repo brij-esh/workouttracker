@@ -56,6 +56,27 @@
     </div>
   </header>
 
+  <main class="content">
+    @if (outbox.pendingCount() > 0) {
+      <div
+        class="sync-banner"
+        [class.syncing]="outbox.syncing()"
+        role="status"
+      >
+        @if (outbox.syncing()) {
+          Syncing {{ outbox.pendingCount() }} offline change{{ outbox.pendingCount() === 1 ? '' : 's' }}…
+        } @else {
+          Offline · {{ outbox.pendingCount() }} change{{ outbox.pendingCount() === 1 ? '' : 's' }} waiting to sync
+        }
+      </div>
+    }
+    <router-outlet />
+  </main>
+
+  <div class="session-dock" [class.active]="session.hasSession()" aria-live="polite">
+    <app-active-workout-fab />
+  </div>
+
   <aside class="rail" id="app-nav">
     <nav aria-label="Main">
       <a
@@ -111,25 +132,7 @@
       </a>
     </nav>
   </aside>
-
-  <main class="content">
-    @if (outbox.pendingCount() > 0) {
-      <div
-        class="sync-banner"
-        [class.syncing]="outbox.syncing()"
-        role="status"
-      >
-        @if (outbox.syncing()) {
-          Syncing {{ outbox.pendingCount() }} offline change{{ outbox.pendingCount() === 1 ? '' : 's' }}…
-        } @else {
-          Offline · {{ outbox.pendingCount() }} change{{ outbox.pendingCount() === 1 ? '' : 's' }} waiting to sync
-        }
-      </div>
-    }
-    <router-outlet />
-  </main>
 </div>
 
-<app-active-workout-fab />
 <app-confirm-dialog-host />
 <app-toast-host />

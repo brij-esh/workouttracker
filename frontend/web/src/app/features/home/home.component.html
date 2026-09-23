@@ -72,17 +72,26 @@
             <input
               type="number"
               inputmode="numeric"
-              min="0"
+              min="1"
               name="manualSteps"
               [ngModel]="manualSteps()"
               (ngModelChange)="onManualStepsChange($event)"
               (keydown.enter)="addManualSteps(); $event.preventDefault()"
-              placeholder="Steps"
+              placeholder="Amount"
               [disabled]="stepsBusy()"
               autofocus
             />
             <button type="button" class="primary tiny" [disabled]="stepsBusy()" (click)="addManualSteps()">
               {{ stepsBusy() ? '…' : 'Add' }}
+            </button>
+            <button
+              type="button"
+              class="ghost tiny"
+              [disabled]="stepsBusy() || todaySteps() <= 0"
+              (click)="removeManualSteps()"
+              title="Subtract from today’s total"
+            >
+              Remove
             </button>
             <button type="button" class="ghost tiny" [disabled]="stepsBusy()" (click)="cancelAddSteps()">
               Cancel
@@ -104,6 +113,7 @@
       <div class="stat">
         <span class="stat-value">{{ weekCalories() }}</span>
         <span class="stat-label">Calories burned</span>
+        <span class="stat-hint">Workouts {{ weekWorkoutCalories() }} · Steps {{ weekStepCalories() }}</span>
       </div>
       <div class="stat">
         <span class="stat-value">{{ streakDays() }}</span>

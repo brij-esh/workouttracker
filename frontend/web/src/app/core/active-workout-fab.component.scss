@@ -202,21 +202,36 @@
   }
 }
 
-/* Sit above the mobile bottom nav so docked peek stays tappable */
+/* Mobile: sit in the shell dock above the tab bar (not fixed over it). */
 @media (max-width: 767px) {
+  :host {
+    display: block;
+    width: 100%;
+  }
+
   .fab-card {
-    --fab-bottom-clearance: calc(4.35rem + 0.55rem + env(safe-area-inset-bottom, 0px));
-    right: 0.75rem;
-    left: 0.75rem;
-    width: auto;
+    position: relative;
+    z-index: 1;
+    right: auto;
+    left: auto;
+    bottom: auto;
+    width: 100%;
+    max-width: none;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 70%, transparent);
   }
 
   .fab-card.docked {
     left: auto;
-    right: 0.75rem;
-    width: fit-content;
-    max-width: min(11.5rem, calc(100vw - 1.5rem));
-    padding: 0.35rem 0.7rem;
+    right: auto;
+    width: 100%;
+    max-width: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: 0.85rem;
+    justify-items: stretch;
+  }
+
+  .fab-card.docked .fab-peek-bar {
+    justify-content: center;
   }
 
   .fab-peek-hint {
@@ -230,7 +245,7 @@
 
 @media (max-width: 380px) {
   .fab-card.docked {
-    max-width: calc(100vw - 1.5rem);
+    max-width: none;
   }
 }
 
