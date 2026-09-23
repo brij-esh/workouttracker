@@ -31,12 +31,17 @@ export class WorkoutOsNotificationService {
 
   private mediaTick: ReturnType<typeof setInterval> | null = null;
   private notifTick: ReturnType<typeof setInterval> | null = null;
+  /** Serialize Android schedule() calls so ticks never pile up. */
+  private androidPostChain: Promise<void> = Promise.resolve();
+  private lastAndroidPostAt = 0;
   private audioCtx: AudioContext | null = null;
   private audioGain: GainNode | null = null;
   private audioOsc: OscillatorNode | null = null;
   private readonly isIos = this.detectIos();
   private readonly isNativeAndroid =
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  /** Android: refresh shade timer slowly — scheduling every second spams the shade. */
+  private readonly notifTickMs = this.isNativeAndroid ? 30_000 : 1_000;
 
   constructor() {
     if (typeof document !== 'undefined') {
@@ -138,8 +143,9 @@ export class WorkoutOsNotificationService {
   }
 
   /**
-   * Quietly refresh the same notification each second so the shade timer stays live.
-   * Android uses Capacitor LocalNotifications (ongoing); web uses tagged SW notifications.
+   * Quietly refresh the same notification so the shade timer stays live.
+   * Android: at most every 30s (LocalNotifications.schedule every second spams).
+   * Web: every second via tagged SW notifications.
    */
   private startNotifTicks(): void {
     if (this.isIos || this.notifTick != null) {
@@ -152,7 +158,7 @@ export class WorkoutOsNotificationService {
           return;
         }
         void this.postNotificationOnce(active, this.session.display(), false, true);
-      }, 1000);
+      }, this.notifTickMs);
     });
   }
 
@@ -235,7 +241,25 @@ export class WorkoutOsNotificationService {
     title: string,
     body: string,
     active: ActiveWorkoutSession,
-    _fromTick: boolean
+    fromTick: boolean
+  ): Promise<void> {
+    const now = Date.now();
+    // Hard rate-limit: never re-schedule more than once per 25s from ticks.
+    if (fromTick && now - this.lastAndroidPostAt < 25_000) {
+      return;
+    }
+
+    this.androidPostChain = this.androidPostChain
+      .catch(() => undefined)
+      .then(() => this.scheduleAndroidNotification(title, body, active, fromTick));
+    await this.androidPostChain;
+  }
+
+  private async scheduleAndroidNotification(
+    title: string,
+    body: string,
+    active: ActiveWorkoutSession,
+    fromTick: boolean
   ): Promise<void> {
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
@@ -268,8 +292,16 @@ export class WorkoutOsNotificationService {
         }
       };
 
-      // Same id replaces the shade entry (works for delivered + ongoing).
+      // Replace in place — cancel first so Android does not enqueue a second alert.
+      if (!fromTick) {
+        try {
+          await LocalNotifications.cancel({ notifications: [{ id: NATIVE_NOTIF_ID }] });
+        } catch {
+          /* ignore */
+        }
+      }
       await LocalNotifications.schedule({ notifications: [payload] });
+      this.lastAndroidPostAt = Date.now();
     } catch {
       /* ignore — permission / plugin */
     }

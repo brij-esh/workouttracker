@@ -36,7 +36,7 @@ export class NotificationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPage(0);
-    this.badge.refresh();
+    this.badge.refresh({ force: true });
   }
 
   setTab(next: InboxTab): void {

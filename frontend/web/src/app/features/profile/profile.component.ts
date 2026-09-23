@@ -332,8 +332,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   deviceSyncLabel(): string {
     if (this.stepsPlatform.deviceSyncEnabled()) {
       return this.stepsPlatform.devicePermission() === 'unsupported'
-        ? 'Enabled · awaits native bridge'
-        : 'Enabled';
+        ? 'Enabled · install Health Connect'
+        : 'Enabled · Health Connect';
     }
     return 'Off';
   }
@@ -341,8 +341,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   wearableSyncLabel(): string {
     if (this.stepsPlatform.wearableSyncEnabled()) {
       return this.stepsPlatform.wearablePermission() === 'unsupported'
-        ? 'Enabled · awaits native bridge'
-        : 'Enabled';
+        ? 'Enabled · install Health Connect'
+        : 'Enabled · Health Connect';
     }
     return 'Off';
   }
@@ -357,6 +357,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const result = await this.stepsPlatform.setDeviceSyncEnabled(next);
       if (result === 'denied') {
         this.toast.error('Phone step access was denied');
+      } else if (result === 'unsupported') {
+        this.toast.error('Health Connect is required for phone steps');
+        await this.stepsPlatform.openHealthSettings();
+      } else if (result === 'granted') {
+        this.toast.success('Phone step sync enabled');
       }
     } finally {
       this.syncBusy.set(null);
@@ -373,6 +378,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const result = await this.stepsPlatform.setWearableSyncEnabled(next);
       if (result === 'denied') {
         this.toast.error('Wearable access was denied');
+      } else if (result === 'unsupported') {
+        this.toast.error('Health Connect is required for wearable steps');
+        await this.stepsPlatform.openHealthSettings();
+      } else if (result === 'granted') {
+        this.toast.success('Wearable step sync enabled');
       }
     } finally {
       this.syncBusy.set(null);

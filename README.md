@@ -119,7 +119,10 @@ Notes:
 
 - Keep Docker + the tunnel process running while you use the Vercel site.
 - Quick tunnels get a new hostname each restart — update `API_BASE_URL` and redeploy (or rerun the deploy script).
-- Gateway CORS already allows `https://*.vercel.app`.
+- Gateway CORS allows `https://*.vercel.app` and Capacitor WebView origins (`https://localhost`, `capacitor://localhost`).
+- Android APK builds use CapacitorHttp (native networking) so they are not blocked by WebView CORS. Build with:
+  `$env:API_BASE_URL="https://YOUR-SUBDOMAIN.trycloudflare.com"; npm run android:apk` from `frontend/web`.
+  If `API_BASE_URL` is omitted, the last absolute URL in `environment.prod.ts` is kept.
 
 ## API testing
 

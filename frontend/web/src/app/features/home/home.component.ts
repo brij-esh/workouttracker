@@ -9,6 +9,7 @@ import { AchievementsService, AchievementsSnapshot } from '../../core/achievemen
 import { MotivationalQuote, MotivationalQuoteService } from '../../core/motivational-quote.service';
 import { ToastService } from '../../core/toast.service';
 import { NotificationBadgeService } from '../../core/notification-badge.service';
+import { StepsPlatformService } from '../../core/steps-platform.service';
 import {
   Meal,
   NotificationItem,
@@ -35,6 +36,7 @@ export class HomeComponent implements OnInit {
   private readonly quotes = inject(MotivationalQuoteService);
   private readonly toast = inject(ToastService);
   private readonly badge = inject(NotificationBadgeService);
+  private readonly stepsPlatform = inject(StepsPlatformService);
   readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
@@ -219,6 +221,7 @@ export class HomeComponent implements OnInit {
         } else {
           this.error.set(null);
         }
+        void this.syncPlatformSteps();
       },
       error: () => {
         this.loading.set(false);
@@ -226,6 +229,47 @@ export class HomeComponent implements OnInit {
         this.error.set('Could not load your dashboard. Check your connection and try again.');
       }
     });
+  }
+
+  /** Pull phone/wearable steps from Health Connect when sync is enabled. */
+  private async syncPlatformSteps(): Promise<void> {
+    if (
+      !this.stepsPlatform.deviceSyncEnabled() &&
+      !this.stepsPlatform.wearableSyncEnabled()
+    ) {
+      return;
+    }
+    try {
+      const sample = await this.stepsPlatform.readPreferredTodaySteps();
+      if (!sample || sample.steps <= 0) {
+        return;
+      }
+      const current = this.todaySteps();
+      // Never clobber a higher manual/server total with a lower sensor reading.
+      if (sample.steps <= current && this.stepsToday()?.source === 'MANUAL') {
+        return;
+      }
+      if (sample.steps === current && this.stepsToday()?.source === sample.source) {
+        return;
+      }
+      if (sample.steps < current) {
+        return;
+      }
+      this.api
+        .upsertSteps({
+          recordedOn: this.todayKey,
+          steps: sample.steps,
+          source: sample.source,
+          sourceLabel: sample.sourceLabel,
+          weightKg: this.weightForSteps()
+        })
+        .subscribe({
+          next: (log) => this.applyStepLog(log),
+          error: () => undefined
+        });
+    } catch {
+      /* ignore — permissions / Health Connect */
+    }
   }
 
   cancelAddSteps(): void {

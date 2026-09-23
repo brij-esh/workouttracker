@@ -61,12 +61,15 @@
       <div
         class="sync-banner"
         [class.syncing]="outbox.syncing()"
+        [class.offline]="outbox.offline() && !outbox.syncing()"
         role="status"
       >
         @if (outbox.syncing()) {
           Syncing {{ outbox.pendingCount() }} offline change{{ outbox.pendingCount() === 1 ? '' : 's' }}…
-        } @else {
+        } @else if (outbox.offline()) {
           Offline · {{ outbox.pendingCount() }} change{{ outbox.pendingCount() === 1 ? '' : 's' }} waiting to sync
+        } @else {
+          {{ outbox.pendingCount() }} change{{ outbox.pendingCount() === 1 ? '' : 's' }} waiting to sync…
         }
       </div>
     }

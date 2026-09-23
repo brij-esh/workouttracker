@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { ApiService } from '../core/api.service';
 import { RegionService } from '../core/region.service';
@@ -8,6 +8,7 @@ import { NotificationBadgeService } from '../core/notification-badge.service';
 import { ActiveWorkoutSessionService } from '../core/active-workout-session.service';
 import { WorkoutOsNotificationService } from '../core/workout-os-notification.service';
 import { OfflineOutboxService } from '../core/offline-outbox.service';
+import { NativePlatformService } from '../core/native-platform.service';
 import { canResumePausedWorkout } from '../core/date-window';
 import { APP_BRAND } from '../core/app-brand';
 import { ToastHostComponent } from '../core/toast-host.component';
@@ -28,7 +29,7 @@ import { ConfirmDialogHostComponent } from '../core/confirm-dialog-host.componen
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss'
 })
-export class ShellComponent implements OnInit {
+export class ShellComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   readonly brand = APP_BRAND;
   readonly badge = inject(NotificationBadgeService);
@@ -37,25 +38,42 @@ export class ShellComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly region = inject(RegionService);
   private readonly router = inject(Router);
+  private readonly native = inject(NativePlatformService);
   /** Keep OS workout notifications alive for the shell lifetime. */
   private readonly workoutOsNotif = inject(WorkoutOsNotificationService);
+
+  private readonly subs = new Subscription();
+  private appStateHandle: { remove: () => Promise<void> } | null = null;
 
   ngOnInit(): void {
     void this.workoutOsNotif;
     this.region.refresh();
     this.syncRegionToProfile();
-    this.badge.refresh();
+    this.badge.refresh({ force: true });
     this.recoverActiveSession();
-    this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe(() => this.badge.refresh());
+    // Only refresh badge when entering the inbox — not on every tab switch.
+    this.subs.add(
+      this.router.events
+        .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+        .subscribe((e) => {
+          if (e.urlAfterRedirects.includes('/notifications')) {
+            this.badge.refresh({ force: true });
+          }
+        })
+    );
+    void this.listenAppResume();
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+    void this.appStateHandle?.remove();
   }
 
   /** Go Home without a full page reload (avoids a visible UI flash). */
   hardRefreshHome(): void {
     const url = this.router.url.split('?')[0];
     if (url === '/app' || url === '/app/') {
-      this.badge.refresh();
+      this.badge.refresh({ force: true });
       return;
     }
     void this.router.navigateByUrl('/app');
@@ -68,6 +86,22 @@ export class ShellComponent implements OnInit {
     }
     this.session.show();
     void this.router.navigate(['/app/workouts', active.workoutId]);
+  }
+
+  private async listenAppResume(): Promise<void> {
+    if (!this.native.isNative) {
+      return;
+    }
+    try {
+      const { App } = await import('@capacitor/app');
+      this.appStateHandle = await App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          this.badge.refresh();
+        }
+      });
+    } catch {
+      /* web / plugin unavailable */
+    }
   }
 
   /** Reattach floating timer if backend has an open session (e.g. new tab). */

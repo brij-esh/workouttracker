@@ -22,6 +22,9 @@ export interface OutboxEntry {
 const DB_NAME = 'wt.outbox.v1';
 const STORE = 'mutations';
 const MAX_ATTEMPTS = 5;
+/** Dedupe reachability probes under concurrent callers. */
+const REACHABILITY_TTL_MS = 2_500;
+const PROBE_TIMEOUT_MS = 4_000;
 
 @Injectable({ providedIn: 'root' })
 export class OfflineOutboxService {
@@ -32,50 +35,106 @@ export class OfflineOutboxService {
 
   readonly pendingCount = signal(0);
   readonly syncing = signal(false);
-  readonly offline = signal(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  /** True only after a failed server probe — not based on flaky navigator.onLine alone. */
+  readonly offline = signal(false);
 
   private dbPromise: Promise<IDBDatabase> | null = null;
   private flushTimer: ReturnType<typeof setInterval> | null = null;
-  private flushing = false;
+  /** Shared in-flight flush so concurrent callers await the same run (no race). */
+  private flushPromise: Promise<void> | null = null;
+  private reachabilityCache: { at: number; ok: boolean } | null = null;
+  private reachabilityInflight: Promise<boolean> | null = null;
 
   constructor() {
     if (typeof window === 'undefined') {
       return;
     }
+    // Android WebView fires online/offline spuriously — always verify with a probe.
     window.addEventListener('online', () => {
-      this.setOffline(false);
-      void this.flush();
+      void this.isServerReachable().then((ok) => {
+        if (ok) {
+          void this.flush();
+        }
+      });
     });
-    window.addEventListener('offline', () => this.setOffline(true));
+    window.addEventListener('offline', () => {
+      void this.isServerReachable();
+    });
     void this.refreshCount();
-    this.flushTimer = setInterval(() => void this.flush(), 15_000);
-    queueMicrotask(() => void this.flush());
+    this.flushTimer = setInterval(() => void this.flush(), 12_000);
+    queueMicrotask(() => {
+      void this.isServerReachable().then((ok) => {
+        if (ok) {
+          void this.flush();
+        }
+      });
+    });
   }
 
-  /** CORS-safe reachability probe (actuator/health is outside gateway CORS). */
+  /** Public gateway health (no auth). Derived from apiBaseUrl host. */
   healthUrl(): string {
     const base = environment.apiBaseUrl.replace(/\/$/, '');
-    return `${base}/users/me`;
-  }
-
-  async isServerReachable(): Promise<boolean> {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.setOffline(true);
-      return false;
+    if (base.startsWith('/')) {
+      return '/actuator/health';
     }
     try {
-      // Any HTTP response (incl. 401) means the gateway answered.
-      await fetch(this.healthUrl(), {
+      const origin = new URL(base).origin;
+      return `${origin}/actuator/health`;
+    } catch {
+      return base.replace(/\/api\/v1$/i, '') + '/actuator/health';
+    }
+  }
+
+  /**
+   * Probe the gateway. Does not trust navigator.onLine (unreliable on Capacitor Android).
+   * Concurrent callers share one in-flight probe; results are cached briefly.
+   */
+  async isServerReachable(force = false): Promise<boolean> {
+    const now = Date.now();
+    if (
+      !force &&
+      this.reachabilityCache &&
+      now - this.reachabilityCache.at < REACHABILITY_TTL_MS
+    ) {
+      return this.reachabilityCache.ok;
+    }
+    if (this.reachabilityInflight) {
+      return this.reachabilityInflight;
+    }
+
+    this.reachabilityInflight = this.probeHealth().finally(() => {
+      this.reachabilityInflight = null;
+    });
+    return this.reachabilityInflight;
+  }
+
+  private async probeHealth(): Promise<boolean> {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer =
+      ctrl != null
+        ? setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS)
+        : null;
+    try {
+      const res = await fetch(this.healthUrl(), {
         method: 'GET',
         cache: 'no-store',
         credentials: 'omit',
-        headers: { Accept: 'application/json' }
+        headers: { Accept: 'application/json' },
+        signal: ctrl?.signal
       });
-      this.setOffline(false);
-      return true;
+      // Any HTTP response means the tunnel/gateway answered.
+      const ok = res.status > 0;
+      this.reachabilityCache = { at: Date.now(), ok };
+      this.setOffline(!ok);
+      return ok;
     } catch {
+      this.reachabilityCache = { at: Date.now(), ok: false };
       this.setOffline(true);
       return false;
+    } finally {
+      if (timer != null) {
+        clearTimeout(timer);
+      }
     }
   }
 
@@ -100,7 +159,10 @@ export class OfflineOutboxService {
     await this.put(entry);
     await this.refreshCount();
     this.applyOptimisticCache(entry);
+    this.setOffline(true);
     this.toast.success('Saved offline — will sync when the server is back', 3200);
+    // Kick a flush in case connectivity returns quickly.
+    queueMicrotask(() => void this.flush());
     return entry;
   }
 
@@ -122,55 +184,81 @@ export class OfflineOutboxService {
     };
   }
 
-  async flush(): Promise<void> {
-    if (this.flushing) {
-      return;
+  /** Serialize flushes — concurrent callers await the same run. */
+  flush(): Promise<void> {
+    if (this.flushPromise) {
+      return this.flushPromise;
     }
+    this.flushPromise = this.runFlush().finally(() => {
+      this.flushPromise = null;
+    });
+    return this.flushPromise;
+  }
+
+  private async runFlush(): Promise<void> {
     const uid = this.auth.user()?.uid;
     if (!uid) {
       return;
     }
 
-    // Quiet no-op when nothing is queued — avoids UI flicker from the 15s poll.
     const queued = await this.listForUser(uid);
     if (!queued.length) {
       if (this.pendingCount() !== 0) {
         this.pendingCount.set(0);
       }
+      // Opportunistic online check so the banner clears when empty.
+      if (this.offline()) {
+        void this.isServerReachable();
+      }
       return;
     }
 
-    if (!(await this.isServerReachable())) {
+    if (!(await this.isServerReachable(true))) {
       return;
     }
 
-    this.flushing = true;
     this.syncing.set(true);
     try {
       const queue = queued.sort((a, b) => a.createdAt - b.createdAt);
       let synced = 0;
+
       for (const entry of queue) {
+        // Re-check auth mid-flush (logout / token expiry).
+        if (!this.auth.user()?.uid) {
+          break;
+        }
+
         try {
-          await this.replay(entry);
+          await this.replayWithRetry(entry);
           await this.remove(entry.id);
           synced++;
         } catch (err) {
           const status = (err as { status?: number })?.status;
           entry.attempts += 1;
+
+          // Permanent client errors — drop (except timeout / rate-limit).
           if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
             await this.remove(entry.id);
             this.toast.error('Offline change could not sync and was dropped');
             continue;
           }
+
           if (entry.attempts >= MAX_ATTEMPTS) {
             await this.remove(entry.id);
             this.toast.error('Offline change failed too many times and was dropped');
             continue;
           }
+
           await this.put(entry);
-          break;
+
+          // Still reachable? Keep going with the next item (avoid one flaky call stalling all).
+          // Unreachable? Stop and wait for the next flush cycle.
+          if (!(await this.isServerReachable(true))) {
+            break;
+          }
         }
       }
+
       if (synced > 0) {
         this.cache.invalidate(
           'profile',
@@ -188,9 +276,27 @@ export class OfflineOutboxService {
         );
       }
     } finally {
-      this.flushing = false;
       this.syncing.set(false);
       await this.refreshCount();
+    }
+  }
+
+  /** Replay once; on status 0 / 5xx, verify server is up and retry once before failing. */
+  private async replayWithRetry(entry: OutboxEntry): Promise<void> {
+    try {
+      await this.replay(entry);
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      const transient = status === 0 || status == null || status >= 500 || status === 408 || status === 429;
+      if (!transient) {
+        throw err;
+      }
+      const up = await this.isServerReachable(true);
+      if (!up) {
+        throw err;
+      }
+      await delay(400);
+      await this.replay(entry);
     }
   }
 
@@ -331,4 +437,8 @@ export class OfflineOutboxService {
       req.onerror = () => reject(req.error ?? new Error('outbox list failed'));
     });
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

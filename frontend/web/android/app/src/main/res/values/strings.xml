@@ -4,4 +4,6 @@
     <string name="title_activity_main">Repwise</string>
     <string name="package_name">com.repwise.app</string>
     <string name="custom_url_scheme">com.repwise.app</string>
+    <!-- Shown by Health Connect permission UI -->
+    <string name="health_connect_privacy_policy_url">file:///android_asset/public/privacypolicy.html</string>
 </resources>

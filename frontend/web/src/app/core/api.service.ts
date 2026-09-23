@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { ApiCacheService, CacheScope } from './api-cache.service';
+import { ApiCacheService, CacheLoadOptions, CacheScope } from './api-cache.service';
 import {
   CreateUserProfileRequest,
   CreateWorkoutPlanRequest,
@@ -55,7 +55,8 @@ export class ApiService {
 
   getMyProfile(): Observable<UserProfile> {
     return this.cached('profile:me', ['profile'], () =>
-      this.http.get<UserProfile>(`${this.base}/users/me`)
+      this.http.get<UserProfile>(`${this.base}/users/me`),
+      { maxAgeMs: 120_000 }
     );
   }
 
@@ -79,7 +80,8 @@ export class ApiService {
 
   listWorkouts(): Observable<Workout[]> {
     return this.cached('workouts:list', ['workouts'], () =>
-      this.http.get<Workout[]>(`${this.base}/workouts`)
+      this.http.get<Workout[]>(`${this.base}/workouts`),
+      { maxAgeMs: 45_000 }
     );
   }
 
@@ -493,16 +495,26 @@ export class ApiService {
   }
 
   getStepsForDay(date?: string): Observable<StepLog | null> {
+    const day = date ?? 'today';
     const qs = date ? `?date=${encodeURIComponent(date)}` : '';
-    return this.http.get<StepLog | null>(`${this.base}/progress/steps/day${qs}`).pipe(
-      map((body) => body ?? null),
-      catchError(() => of(null))
+    return this.cached(
+      `steps:day:${day}`,
+      ['progress'],
+      () =>
+        this.http.get<StepLog | null>(`${this.base}/progress/steps/day${qs}`).pipe(
+          map((body) => body ?? null),
+          catchError(() => of(null))
+        ),
+      { maxAgeMs: 30_000 }
     );
   }
 
   upsertSteps(body: StepLogRequest): Observable<StepLog> {
     return this.http.put<StepLog>(`${this.base}/progress/steps`, body).pipe(
-      tap(() => this.cache.invalidate('progress'))
+      tap((row) => {
+        this.cache.invalidate('progress');
+        this.cache.set(`steps:day:${row.recordedOn}`, row, ['progress']);
+      })
     );
   }
 
@@ -608,7 +620,8 @@ export class ApiService {
 
   getExerciseLibraryMeta(): Observable<ExerciseLibraryMeta> {
     return this.cached('library:meta', ['library'], () =>
-      this.http.get<ExerciseLibraryMeta>(`${this.base}/exercises/meta`)
+      this.http.get<ExerciseLibraryMeta>(`${this.base}/exercises/meta`),
+      { maxAgeMs: 300_000 }
     );
   }
 
@@ -685,9 +698,12 @@ export class ApiService {
   }
 
   unreadCount(): Observable<{ unreadCount: number }> {
-    // Always fresh — shell badge and inbox depend on live counts
-    return this.http.get<{ unreadCount: number }>(
-      `${this.base}/notifications/unread-count`
+    return this.cached(
+      'notifications:unread',
+      ['notifications'],
+      () =>
+        this.http.get<{ unreadCount: number }>(`${this.base}/notifications/unread-count`),
+      { maxAgeMs: 45_000 }
     );
   }
 
@@ -720,8 +736,13 @@ export class ApiService {
       .pipe(tap(() => this.cache.invalidate('notifications')));
   }
 
-  private cached<T>(key: string, scopes: CacheScope[], loader: () => Observable<T>): Observable<T> {
-    return this.cache.getOrLoad(key, scopes, loader);
+  private cached<T>(
+    key: string,
+    scopes: CacheScope[],
+    loader: () => Observable<T>,
+    options?: CacheLoadOptions
+  ): Observable<T> {
+    return this.cache.getOrLoad(key, scopes, loader, options);
   }
 
   private afterWorkoutWrite(workout: Workout): void {

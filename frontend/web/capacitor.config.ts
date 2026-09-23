@@ -5,9 +5,15 @@ const config: CapacitorConfig = {
   appName: 'Repwise',
   webDir: 'dist/web/browser',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    // Allow WebView XHR/fetch to the tunneled API when CapacitorHttp is off.
+    cleartext: false
   },
   plugins: {
+    // Native HTTP bypasses WebView CORS (required for APK ↔ Cloudflare tunnel).
+    CapacitorHttp: {
+      enabled: true
+    },
     SplashScreen: {
       launchAutoHide: true,
       backgroundColor: '#0b100d'

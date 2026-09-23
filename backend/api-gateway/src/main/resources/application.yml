@@ -29,10 +29,14 @@ spring:
           globalcors:
             cors-configurations:
               '[/**]':
-                # Patterns so Vercel preview/production and local Angular can call a tunneled gateway.
+                # Patterns so Vercel, local Angular, and Capacitor WebViews can call a tunneled gateway.
                 allowed-origin-patterns:
                   - "http://localhost:*"
                   - "http://127.0.0.1:*"
+                  - "https://localhost"
+                  - "https://localhost:*"
+                  - "capacitor://localhost"
+                  - "ionic://localhost"
                   - "https://*.vercel.app"
                   - "https://*.vercel.sh"
                 allowed-methods:
