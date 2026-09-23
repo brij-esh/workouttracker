@@ -1,0 +1,9 @@
+android
+ios
+node_modules
+dist
+.angular
+.vscode
+.env*
+*.log
+docs

@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://regulations-experiments-senators-bracelets.trycloudflare.com/api/v1',
+  apiBaseUrl: 'https://critics-discuss-paragraph-raising.trycloudflare.com/api/v1',
   firebase: {
     apiKey: 'AIzaSyB2yveG-2NCetuyXlu-QgLsOGvamVQ15nQ',
     authDomain: 'workouttracker-d526e.firebaseapp.com',
