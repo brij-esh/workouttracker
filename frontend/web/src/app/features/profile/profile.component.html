@@ -209,11 +209,12 @@
     <div class="activity-sync-copy">
       <h2>Activity sync</h2>
       <p class="muted">
-        Enable phone or wearable step sync when a native health bridge is available. Manual adds stay on Home.
+        Phone uses the built-in pedometer. Wearable reads steps from Health Connect (watches/bands that sync to it).
+        Manual adds stay on Home.
       </p>
       @if (!stepsPlatform.capability().nativeBridge) {
         <p class="sync-note muted">
-          This browser can’t read HealthKit / Health Connect yet — toggles save your preference for a native app build.
+          This browser can’t read phone sensors / Health Connect — use the Android app, or add steps manually.
         </p>
       }
     </div>

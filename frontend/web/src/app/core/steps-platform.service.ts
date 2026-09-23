@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { StepSource } from './models';
 
 export type StepsPermissionState = 'unknown' | 'granted' | 'denied' | 'unsupported';
@@ -7,7 +7,6 @@ export type StepsPermissionState = 'unknown' | 'granted' | 'denied' | 'unsupport
 export interface StepsCapability {
   deviceSupported: boolean;
   wearableSupported: boolean;
-  /** True when Health Connect / HealthKit bridge is usable. */
   nativeBridge: boolean;
   reason: string;
 }
@@ -24,9 +23,21 @@ const WEARABLE_PERM_KEY = 'repwise.steps.wearablePermission';
 const DEVICE_ENABLED_KEY = 'repwise.steps.deviceEnabled';
 const WEARABLE_ENABLED_KEY = 'repwise.steps.wearableEnabled';
 
+const AUTH_TIMEOUT_MS = 45_000;
+const QUICK_TIMEOUT_MS = 8_000;
+
+interface RepwiseStepsPlugin {
+  isAvailable(): Promise<{ available: boolean; reason?: string }>;
+  checkPermission(): Promise<{ granted: boolean }>;
+  requestPermission(): Promise<{ granted: boolean }>;
+  getTodaySteps(): Promise<{ steps: number; dayKey: string; sourceLabel?: string }>;
+}
+
+const RepwiseSteps = registerPlugin<RepwiseStepsPlugin>('RepwiseSteps');
+
 /**
- * Phone + wearable steps via Health Connect (Android) / HealthKit (iOS).
- * On web browsers there is no pedometer API — toggles store intent only.
+ * Phone steps: native TYPE_STEP_COUNTER (RepwiseSteps) — works without Health Connect.
+ * Wearable steps: Health Connect aggregate (watch/band data synced by the OS).
  */
 @Injectable({ providedIn: 'root' })
 export class StepsPlatformService {
@@ -35,7 +46,7 @@ export class StepsPlatformService {
   readonly deviceSyncEnabled = signal(this.readFlag(DEVICE_ENABLED_KEY));
   readonly wearableSyncEnabled = signal(this.readFlag(WEARABLE_ENABLED_KEY));
 
-  private availabilityCache: { at: number; available: boolean; reason: string } | null = null;
+  private healthAvailCache: { at: number; available: boolean; reason: string } | null = null;
 
   capability(): StepsCapability {
     if (!Capacitor.isNativePlatform()) {
@@ -44,14 +55,17 @@ export class StepsPlatformService {
         wearableSupported: false,
         nativeBridge: false,
         reason:
-          'Safari and Chrome cannot read HealthKit / Health Connect. Use the Android app for phone and wearable sync, or add steps manually on Home.'
+          'Safari and Chrome cannot read phone sensors / Health Connect. Use the Android app, or add steps manually on Home.'
       };
     }
+    const android = Capacitor.getPlatform() === 'android';
     return {
-      deviceSupported: true,
-      wearableSupported: true,
+      deviceSupported: android,
+      wearableSupported: android,
       nativeBridge: true,
-      reason: 'Native health bridge (Health Connect / HealthKit)'
+      reason: android
+        ? 'Phone pedometer + Health Connect for wearables'
+        : 'Native health bridge'
     };
   }
 
@@ -84,18 +98,31 @@ export class StepsPlatformService {
   }
 
   async requestDevicePermission(): Promise<StepsPermissionState> {
-    return this.requestHealthPermission('DEVICE');
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+      return this.setDevicePerm('unsupported');
+    }
+    try {
+      const avail = await withTimeout(RepwiseSteps.isAvailable(), QUICK_TIMEOUT_MS, null);
+      if (!avail?.available) {
+        // Fall back to Health Connect for phone totals.
+        return this.requestHealthPermission('DEVICE');
+      }
+      const result = await withTimeout(
+        RepwiseSteps.requestPermission(),
+        AUTH_TIMEOUT_MS,
+        { granted: false }
+      );
+      const state: StepsPermissionState = result?.granted ? 'granted' : 'denied';
+      return this.setDevicePerm(state);
+    } catch {
+      return this.setDevicePerm('denied');
+    }
   }
 
   async requestWearablePermission(): Promise<StepsPermissionState> {
     return this.requestHealthPermission('WEARABLE');
   }
 
-  /**
-   * Read today's step total from Health Connect / HealthKit.
-   * Wearables that sync to Health Connect are included in the same pool;
-   * when preferred is WEARABLE we prefer samples tagged as watch/band/ring.
-   */
   async readTodaySteps(preferred: 'DEVICE' | 'WEARABLE' = 'DEVICE'): Promise<StepsSample | null> {
     if (!Capacitor.isNativePlatform()) {
       return null;
@@ -105,18 +132,77 @@ export class StepsPlatformService {
     if (!enabled) {
       return null;
     }
+
+    if (preferred === 'DEVICE') {
+      const phone = await this.readPhoneSensorSteps();
+      if (phone) {
+        return phone;
+      }
+      // Optional HC fallback if sensor unavailable.
+      return this.readHealthConnectSteps('DEVICE');
+    }
+
+    return this.readHealthConnectSteps('WEARABLE');
+  }
+
+  async readPreferredTodaySteps(): Promise<StepsSample | null> {
+    const wearable = this.wearableSyncEnabled()
+      ? await this.readTodaySteps('WEARABLE')
+      : null;
+    const phone = this.deviceSyncEnabled() ? await this.readTodaySteps('DEVICE') : null;
+
+    if (wearable && phone) {
+      // Use the higher total so we never under-count.
+      return wearable.steps >= phone.steps ? wearable : phone;
+    }
+    return wearable ?? phone;
+  }
+
+  openHealthSettings(): void {
+    void (async () => {
+      try {
+        const Health = await this.loadHealth();
+        await withTimeout(Health?.openHealthConnectSettings?.() ?? Promise.resolve(), 5_000, undefined);
+      } catch {
+        /* ignore — never block UI */
+      }
+    })();
+  }
+
+  private async readPhoneSensorSteps(): Promise<StepsSample | null> {
+    if (this.devicePermission() === 'denied' || this.devicePermission() === 'unsupported') {
+      return null;
+    }
+    try {
+      const result = await withTimeout(RepwiseSteps.getTodaySteps(), QUICK_TIMEOUT_MS, null);
+      if (!result) {
+        return null;
+      }
+      return {
+        steps: Math.max(0, Math.round(Number(result.steps) || 0)),
+        source: 'DEVICE',
+        sourceLabel: result.sourceLabel || 'Phone',
+        recordedOn: result.dayKey || this.todayKey()
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async readHealthConnectSteps(
+    preferred: 'DEVICE' | 'WEARABLE'
+  ): Promise<StepsSample | null> {
     const perm =
       preferred === 'WEARABLE' ? this.wearablePermission() : this.devicePermission();
     if (perm === 'denied' || perm === 'unsupported') {
       return null;
     }
-
     try {
       const Health = await this.loadHealth();
       if (!Health) {
         return null;
       }
-      const avail = await this.ensureAvailable(Health);
+      const avail = await this.ensureHealthAvailable(Health);
       if (!avail.available) {
         return null;
       }
@@ -125,42 +211,39 @@ export class StepsPlatformService {
       let total = 0;
 
       if (Health.queryAggregated) {
-        const { samples } = await Health.queryAggregated({
-          dataType: 'steps',
-          startDate: startIso,
-          endDate: endIso,
-          bucket: 'day',
-          aggregation: 'sum'
-        });
-        total = (samples ?? []).reduce((sum, s) => {
-          const v = typeof s.value === 'number' ? s.value : Number(s.value);
-          return sum + (Number.isFinite(v) ? v : 0);
-        }, 0);
+        const { samples } = await withTimeout(
+          Health.queryAggregated({
+            dataType: 'steps',
+            startDate: startIso,
+            endDate: endIso,
+            bucket: 'day',
+            aggregation: 'sum'
+          }),
+          QUICK_TIMEOUT_MS,
+          { samples: [] }
+        );
+        total = (samples ?? []).reduce((sum, s) => sum + num(s.value), 0);
       } else {
-        const { samples } = await Health.readSamples({
-          dataType: 'steps',
-          startDate: startIso,
-          endDate: endIso,
-          limit: 5000
-        });
+        const { samples } = await withTimeout(
+          Health.readSamples({
+            dataType: 'steps',
+            startDate: startIso,
+            endDate: endIso,
+            limit: 5000
+          }),
+          QUICK_TIMEOUT_MS,
+          { samples: [] }
+        );
         const wearableTypes = new Set(['watch', 'fitnessBand', 'ring', 'chestStrap']);
-        const filtered = (samples ?? []).filter((s) => {
-          if (!s.deviceType) {
-            return true; // unknown origin — include in both pools
-          }
-          const isWearable = wearableTypes.has(s.deviceType);
-          return preferred === 'WEARABLE' ? isWearable : !isWearable;
-        });
-        total = filtered.reduce((sum, s) => {
-          const v = typeof s.value === 'number' ? s.value : Number(s.value);
-          return sum + (Number.isFinite(v) ? v : 0);
-        }, 0);
-        // Wearable preferred but no watch-tagged samples — fall back to full total.
-        if (preferred === 'WEARABLE' && total <= 0 && (samples?.length ?? 0) > 0) {
-          total = samples!.reduce((sum, s) => {
-            const v = typeof s.value === 'number' ? s.value : Number(s.value);
-            return sum + (Number.isFinite(v) ? v : 0);
-          }, 0);
+        const list = samples ?? [];
+        if (preferred === 'WEARABLE') {
+          const wearableOnly = list.filter(
+            (s) => s.deviceType && wearableTypes.has(s.deviceType)
+          );
+          const pool = wearableOnly.length ? wearableOnly : list;
+          total = pool.reduce((sum, s) => sum + num(s.value), 0);
+        } else {
+          total = list.reduce((sum, s) => sum + num(s.value), 0);
         }
       }
 
@@ -176,48 +259,11 @@ export class StepsPlatformService {
     }
   }
 
-  /** Prefer wearable when both enabled; otherwise phone. */
-  async readPreferredTodaySteps(): Promise<StepsSample | null> {
-    if (this.wearableSyncEnabled()) {
-      const w = await this.readTodaySteps('WEARABLE');
-      if (w && w.steps > 0) {
-        return w;
-      }
-    }
-    if (this.deviceSyncEnabled()) {
-      return this.readTodaySteps('DEVICE');
-    }
-    if (this.wearableSyncEnabled()) {
-      return this.readTodaySteps('WEARABLE');
-    }
-    return null;
-  }
-
-  async openHealthSettings(): Promise<void> {
-    try {
-      const Health = await this.loadHealth();
-      if (!Health?.openHealthConnectSettings) {
-        return;
-      }
-      await Health.openHealthConnectSettings();
-    } catch {
-      /* ignore */
-    }
-  }
-
   private async requestHealthPermission(
     kind: 'DEVICE' | 'WEARABLE'
   ): Promise<StepsPermissionState> {
-    const permKey = kind === 'WEARABLE' ? WEARABLE_PERM_KEY : DEVICE_PERM_KEY;
-    const setState = (state: StepsPermissionState) => {
-      this.setPerm(permKey, state);
-      if (kind === 'WEARABLE') {
-        this.wearablePermission.set(state);
-      } else {
-        this.devicePermission.set(state);
-      }
-      return state;
-    };
+    const setState = (state: StepsPermissionState) =>
+      kind === 'WEARABLE' ? this.setWearablePerm(state) : this.setDevicePerm(state);
 
     if (!Capacitor.isNativePlatform()) {
       return setState('unsupported');
@@ -228,52 +274,62 @@ export class StepsPlatformService {
       if (!Health) {
         return setState('unsupported');
       }
-      const avail = await this.ensureAvailable(Health);
+      const avail = await this.ensureHealthAvailable(Health);
       if (!avail.available) {
-        // Prompt install / settings when Health Connect is missing.
-        try {
-          await Health.openHealthConnectSettings?.();
-        } catch {
-          /* ignore */
-        }
+        this.openHealthSettings();
         return setState('unsupported');
       }
 
-      const status = (await Health.requestAuthorization({
-        read: ['steps'],
-        write: []
-      })) as AuthorizationStatus | undefined;
+      // Launch permission UI with a hard timeout so toggles never stay disabled forever.
+      const status = await withTimeout(
+        Health.requestAuthorization({ read: ['steps'], write: [] }),
+        AUTH_TIMEOUT_MS,
+        null
+      );
+
+      if (status == null) {
+        // Timed out while sheet was open — re-check; user may have granted.
+        const check = await withTimeout(
+          Health.checkAuthorization?.({ read: ['steps'], write: [] }) ?? Promise.resolve(null),
+          QUICK_TIMEOUT_MS,
+          null
+        );
+        return setState(isStepsAuthorized(check) ? 'granted' : 'denied');
+      }
 
       const check =
-        (await Health.checkAuthorization?.({
-          read: ['steps'],
-          write: []
-        })) ?? status;
+        (await withTimeout(
+          Health.checkAuthorization?.({ read: ['steps'], write: [] }) ?? Promise.resolve(status),
+          QUICK_TIMEOUT_MS,
+          status
+        )) ?? status;
 
-      const granted = isStepsAuthorized(check);
-      return setState(granted ? 'granted' : 'denied');
+      return setState(isStepsAuthorized(check) ? 'granted' : 'denied');
     } catch {
       return setState('denied');
     }
   }
 
-  private async ensureAvailable(
+  private async ensureHealthAvailable(
     Health: HealthPlugin
   ): Promise<{ available: boolean; reason: string }> {
     const now = Date.now();
-    if (this.availabilityCache && now - this.availabilityCache.at < 60_000) {
-      return this.availabilityCache;
+    if (this.healthAvailCache && now - this.healthAvailCache.at < 30_000) {
+      return this.healthAvailCache;
     }
     try {
-      const result = await Health.isAvailable();
+      const result = await withTimeout(Health.isAvailable(), QUICK_TIMEOUT_MS, {
+        available: false,
+        reason: 'Health Connect check timed out'
+      });
       const available = !!result?.available;
       const reason = result?.reason || (available ? 'ok' : 'Health Connect unavailable');
-      this.availabilityCache = { at: now, available, reason };
-      return this.availabilityCache;
+      this.healthAvailCache = { at: now, available, reason };
+      return this.healthAvailCache;
     } catch (err) {
       const reason = err instanceof Error ? err.message : 'Health check failed';
-      this.availabilityCache = { at: now, available: false, reason };
-      return this.availabilityCache;
+      this.healthAvailCache = { at: now, available: false, reason };
+      return this.healthAvailCache;
     }
   }
 
@@ -286,12 +342,32 @@ export class StepsPlatformService {
     }
   }
 
+  private setDevicePerm(state: StepsPermissionState): StepsPermissionState {
+    this.setPerm(DEVICE_PERM_KEY, state);
+    this.devicePermission.set(state);
+    return state;
+  }
+
+  private setWearablePerm(state: StepsPermissionState): StepsPermissionState {
+    this.setPerm(WEARABLE_PERM_KEY, state);
+    this.wearablePermission.set(state);
+    return state;
+  }
+
   private todayRange(): { startIso: string; endIso: string; dayKey: string } {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    const dayKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-    return { startIso: start.toISOString(), endIso: end.toISOString(), dayKey };
+    return {
+      startIso: start.toISOString(),
+      endIso: end.toISOString(),
+      dayKey: this.todayKey()
+    };
+  }
+
+  private todayKey(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }
 
   private readFlag(key: string): boolean {
@@ -323,7 +399,6 @@ export class StepsPlatformService {
   }
 }
 
-/** Minimal surface of @capgo/capacitor-health used by Repwise. */
 interface HealthPlugin {
   isAvailable(): Promise<{ available: boolean; reason?: string }>;
   requestAuthorization(opts: { read: string[]; write: string[] }): Promise<AuthorizationStatus>;
@@ -350,13 +425,11 @@ interface HealthPlugin {
 interface AuthorizationStatus {
   readAuthorized?: string[];
   readDenied?: string[];
-  writeAuthorized?: string[];
-  writeDenied?: string[];
 }
 
 function isStepsAuthorized(status: AuthorizationStatus | null | undefined): boolean {
   if (!status) {
-    return true;
+    return false;
   }
   if (Array.isArray(status.readDenied) && status.readDenied.includes('steps')) {
     return false;
@@ -364,5 +437,37 @@ function isStepsAuthorized(status: AuthorizationStatus | null | undefined): bool
   if (Array.isArray(status.readAuthorized)) {
     return status.readAuthorized.includes('steps');
   }
-  return true;
+  return false;
+}
+
+function num(v: unknown): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        resolve(fallback);
+      }
+    }, ms);
+    promise
+      .then((value) => {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          resolve(value);
+        }
+      })
+      .catch(() => {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          resolve(fallback);
+        }
+      });
+  });
 }

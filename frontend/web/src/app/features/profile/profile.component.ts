@@ -331,18 +331,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   deviceSyncLabel(): string {
     if (this.stepsPlatform.deviceSyncEnabled()) {
-      return this.stepsPlatform.devicePermission() === 'unsupported'
-        ? 'Enabled · install Health Connect'
-        : 'Enabled · Health Connect';
+      const p = this.stepsPlatform.devicePermission();
+      if (p === 'unsupported') {
+        return 'Enabled · no pedometer';
+      }
+      if (p === 'denied') {
+        return 'On · permission needed';
+      }
+      return 'Enabled · phone sensor';
     }
     return 'Off';
   }
 
   wearableSyncLabel(): string {
     if (this.stepsPlatform.wearableSyncEnabled()) {
-      return this.stepsPlatform.wearablePermission() === 'unsupported'
-        ? 'Enabled · install Health Connect'
-        : 'Enabled · Health Connect';
+      const p = this.stepsPlatform.wearablePermission();
+      if (p === 'unsupported') {
+        return 'Enabled · install Health Connect';
+      }
+      if (p === 'denied') {
+        return 'On · permission needed';
+      }
+      return 'Enabled · Health Connect';
     }
     return 'Off';
   }
@@ -352,18 +362,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
     this.syncBusy.set('device');
+    const safety = window.setTimeout(() => this.syncBusy.set(null), 50_000);
     try {
       const next = !this.stepsPlatform.deviceSyncEnabled();
       const result = await this.stepsPlatform.setDeviceSyncEnabled(next);
       if (result === 'denied') {
-        this.toast.error('Phone step access was denied');
+        this.toast.error('Phone step access was denied — allow Physical activity in system settings');
       } else if (result === 'unsupported') {
-        this.toast.error('Health Connect is required for phone steps');
-        await this.stepsPlatform.openHealthSettings();
+        this.toast.error('This phone has no step sensor');
       } else if (result === 'granted') {
         this.toast.success('Phone step sync enabled');
       }
+    } catch {
+      this.toast.error('Could not update phone step sync');
     } finally {
+      window.clearTimeout(safety);
       this.syncBusy.set(null);
     }
   }
@@ -373,18 +386,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
     this.syncBusy.set('wearable');
+    const safety = window.setTimeout(() => this.syncBusy.set(null), 50_000);
     try {
       const next = !this.stepsPlatform.wearableSyncEnabled();
       const result = await this.stepsPlatform.setWearableSyncEnabled(next);
       if (result === 'denied') {
-        this.toast.error('Wearable access was denied');
+        this.toast.error('Wearable access denied — allow Steps in Health Connect');
       } else if (result === 'unsupported') {
         this.toast.error('Health Connect is required for wearable steps');
-        await this.stepsPlatform.openHealthSettings();
+        this.stepsPlatform.openHealthSettings();
       } else if (result === 'granted') {
         this.toast.success('Wearable step sync enabled');
       }
+    } catch {
+      this.toast.error('Could not update wearable sync');
     } finally {
+      window.clearTimeout(safety);
       this.syncBusy.set(null);
     }
   }
