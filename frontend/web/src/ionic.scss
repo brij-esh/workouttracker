@@ -1,0 +1,52 @@
+/**
+ * Ionic base styles — kept minimal so existing Repwise chrome stays primary.
+ * Map Ionic tokens onto the app palette for when we adopt ion-* components.
+ */
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/display.css';
+
+:root,
+html[data-theme='dark'] {
+  --ion-color-primary: #b4ff39;
+  --ion-color-primary-rgb: 180, 255, 57;
+  --ion-color-primary-contrast: #111111;
+  --ion-color-primary-contrast-rgb: 17, 17, 17;
+  --ion-color-primary-shade: #9ee032;
+  --ion-color-primary-tint: #bcff4d;
+
+  --ion-background-color: var(--bg);
+  --ion-text-color: var(--text);
+  --ion-toolbar-background: var(--panel);
+  --ion-toolbar-color: var(--text);
+  --ion-item-background: var(--panel);
+  --ion-card-background: var(--panel);
+  --ion-border-color: var(--line);
+  --ion-font-family: var(--font-body);
+}
+
+html[data-theme='light'] {
+  --ion-color-primary: #5a9e12;
+  --ion-color-primary-rgb: 90, 158, 18;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #4f8b10;
+  --ion-color-primary-tint: #6ba82a;
+
+  --ion-background-color: var(--bg);
+  --ion-text-color: var(--text);
+  --ion-toolbar-background: var(--panel);
+  --ion-toolbar-color: var(--text);
+  --ion-item-background: var(--panel);
+  --ion-card-background: var(--panel);
+  --ion-border-color: var(--line);
+}
+
+/* ion-app must fill the Capacitor WebView */
+ion-app {
+  display: block;
+  height: 100%;
+  max-height: 100%;
+}

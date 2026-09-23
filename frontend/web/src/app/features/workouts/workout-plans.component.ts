@@ -1,8 +1,9 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
 import { ActiveWorkoutSessionService } from '../../core/active-workout-session.service';
+import { AndroidBackButtonService } from '../../core/android-back-button.service';
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { PlanTemplateType, Weekday, WorkoutPlan, WorkoutPlanDay } from '../../core/models';
 
@@ -39,6 +40,8 @@ export class WorkoutPlansComponent implements OnInit {
   private readonly confirm = inject(ConfirmDialogService);
   private readonly session = inject(ActiveWorkoutSessionService);
   private readonly router = inject(Router);
+  private readonly androidBack = inject(AndroidBackButtonService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly plans = signal<WorkoutPlan[]>([]);
   readonly error = signal<string | null>(null);
@@ -93,6 +96,15 @@ export class WorkoutPlansComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(
+      this.androidBack.registerOverlay(() => {
+        if (!this.pendingTemplate()) {
+          return false;
+        }
+        this.cancelSeedPicker();
+        return true;
+      })
+    );
     this.reload();
   }
 

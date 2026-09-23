@@ -341,7 +341,6 @@ export class HomeComponent implements OnInit {
         this.notes.update((rows) => rows.filter((n) => n.id !== id));
         this.unreadBadge.update((n) => Math.max(0, n - 1));
         this.badge.adjust(-1);
-        this.toast.success('Marked as read');
       },
       error: () => this.toast.error('Could not update notification')
     });
@@ -353,7 +352,6 @@ export class HomeComponent implements OnInit {
         this.notes.update((rows) => rows.filter((n) => n.id !== id));
         this.unreadBadge.update((n) => Math.max(0, n - 1));
         this.badge.adjust(-1);
-        this.toast.success('Alert cleared');
       },
       error: () => this.toast.error('Could not clear alert')
     });

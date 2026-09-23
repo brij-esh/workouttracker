@@ -93,7 +93,6 @@ export class NotificationsComponent implements OnInit {
       next: () => {
         this.badge.adjust(-1);
         this.loadPage(this.page());
-        this.toast.success('Marked as read');
       },
       error: () => this.toast.error('Could not update notification')
     });
@@ -104,7 +103,6 @@ export class NotificationsComponent implements OnInit {
       next: (res) => {
         this.badge.set(res.unreadCount ?? 0);
         this.loadPage(0);
-        this.toast.success('All notifications marked read');
       },
       error: () => this.toast.error('Could not update notifications')
     });
@@ -118,7 +116,6 @@ export class NotificationsComponent implements OnInit {
           this.badge.adjust(-1);
         }
         this.loadPage(this.page());
-        this.toast.success('Notification cleared');
       },
       error: () => this.toast.error('Could not clear notification')
     });
@@ -148,7 +145,6 @@ export class NotificationsComponent implements OnInit {
         this.hasNext.set(false);
         this.hasPrevious.set(false);
         this.badge.set(0);
-        this.toast.success('Inbox cleared');
       },
       error: () => {
         this.clearing.set(false);

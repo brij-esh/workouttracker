@@ -12,6 +12,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   signInWithPhoneNumber,
   sendEmailVerification,
   verifyBeforeUpdateEmail,
@@ -21,6 +22,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Capacitor } from '@capacitor/core';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -211,7 +213,19 @@ export class AuthService {
   }
 
   async loginGoogle(): Promise<void> {
-    await signInWithPopup(this.auth, new GoogleAuthProvider());
+    if (Capacitor.isNativePlatform()) {
+      // WebView popups lose OAuth state ("missing initial state"). Use native Google Sign-In.
+      const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+      const result = await FirebaseAuthentication.signInWithGoogle();
+      const idToken = result.credential?.idToken;
+      if (!idToken) {
+        throw new Error('Google sign-in did not return an ID token.');
+      }
+      const credential = GoogleAuthProvider.credential(idToken);
+      await signInWithCredential(this.auth, credential);
+    } else {
+      await signInWithPopup(this.auth, new GoogleAuthProvider());
+    }
     await this.syncCurrentUser();
   }
 

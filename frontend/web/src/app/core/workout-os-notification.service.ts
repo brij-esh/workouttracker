@@ -1,17 +1,19 @@
 import { Injectable, NgZone, effect, inject, untracked } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { ActiveWorkoutSession, ActiveWorkoutSessionService } from './active-workout-session.service';
 import { APP_BRAND } from './app-brand';
 
 const NOTIF_TAG = 'wt.active-workout';
 const SW_URL = '/sw.js';
+/** Stable Android local-notification id (32-bit). */
+const NATIVE_NOTIF_ID = 71001;
+const ANDROID_CHANNEL_ID = 'workout-live';
 
 /**
- * Lock-screen workout presence:
- * - Live timer via Media Session (no banner spam).
- * - OS notification only on start / pause / resume / end — never on a tick.
- * - Notification text is only workout name + timer.
- * - iPhone: skip OS notification updates entirely (Apple treats replaces as new alerts);
- *   live time still shows via Now Playing / Media Session.
+ * Lock-screen / notification-shade workout presence:
+ * - Android native: Capacitor LocalNotifications (ongoing, live timer in shade).
+ * - Web/desktop: Media Session + quiet tagged Notification (no banner spam).
+ * - iPhone: Media Session only (Apple treats notification replaces as new alerts).
  */
 @Injectable({ providedIn: 'root' })
 export class WorkoutOsNotificationService {
@@ -24,6 +26,8 @@ export class WorkoutOsNotificationService {
   private baseTitle: string = APP_BRAND.name;
   private swReg: ServiceWorkerRegistration | null = null;
   private swReady: Promise<ServiceWorkerRegistration | null> | null = null;
+  private androidChannelReady: Promise<void> | null = null;
+  private nativePermGranted: boolean | null = null;
 
   private mediaTick: ReturnType<typeof setInterval> | null = null;
   private notifTick: ReturnType<typeof setInterval> | null = null;
@@ -31,12 +35,16 @@ export class WorkoutOsNotificationService {
   private audioGain: GainNode | null = null;
   private audioOsc: OscillatorNode | null = null;
   private readonly isIos = this.detectIos();
+  private readonly isNativeAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   constructor() {
     if (typeof document !== 'undefined') {
       this.baseTitle = document.title || APP_BRAND.name;
     }
-    void this.ensureServiceWorker();
+    if (!this.isNativeAndroid) {
+      void this.ensureServiceWorker();
+    }
 
     effect(() => {
       const active = this.session.active();
@@ -48,9 +56,25 @@ export class WorkoutOsNotificationService {
 
   /** Prefer calling from a user gesture (starting a workout). */
   async ensurePermission(): Promise<NotificationPermission | 'unsupported'> {
-    // iOS web notifications cannot update a live timer without spamming banners.
     if (this.isIos) {
       return 'unsupported';
+    }
+    if (this.isNativeAndroid) {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        await this.ensureAndroidChannel(LocalNotifications);
+        const current = await LocalNotifications.checkPermissions();
+        if (current.display === 'granted') {
+          this.nativePermGranted = true;
+          return 'granted';
+        }
+        const requested = await LocalNotifications.requestPermissions();
+        this.nativePermGranted = requested.display === 'granted';
+        return this.nativePermGranted ? 'granted' : 'denied';
+      } catch {
+        this.nativePermGranted = false;
+        return 'denied';
+      }
     }
     if (typeof Notification === 'undefined') {
       return 'unsupported';
@@ -83,14 +107,12 @@ export class WorkoutOsNotificationService {
           ? `${APP_BRAND.name} · Paused`
           : `${APP_BRAND.name} · Workout`;
       }
-      // Clear any stacked banners left from older builds (esp. iPhone).
       if (workoutChanged) {
         void this.clearNotifications();
         this.lastNotifKey = '';
       }
     }
 
-    // Live lock-screen clock (Media Session) — not Notification banners.
     void this.ensureMediaSession(active, paused);
     if (paused) {
       this.stopMediaTicks();
@@ -104,7 +126,6 @@ export class WorkoutOsNotificationService {
       this.updateMediaMetadata(active, this.session.display(), false);
     }
 
-    // Discrete OS notification only when session state changes (Android/desktop).
     if (statusChanged || workoutChanged) {
       void this.postNotificationOnce(active, this.session.display(), paused);
     }
@@ -117,15 +138,11 @@ export class WorkoutOsNotificationService {
   }
 
   /**
-   * Android/desktop only: silently replace the same tagged notification each second
-   * so the shade/lock timer stays live without banner spam (renotify:false + silent).
-   * iPhone skips this — Apple treats replaces as new alerts.
+   * Quietly refresh the same notification each second so the shade timer stays live.
+   * Android uses Capacitor LocalNotifications (ongoing); web uses tagged SW notifications.
    */
   private startNotifTicks(): void {
     if (this.isIos || this.notifTick != null) {
-      return;
-    }
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
       return;
     }
     this.zone.runOutsideAngular(() => {
@@ -156,9 +173,6 @@ export class WorkoutOsNotificationService {
     if (this.isIos) {
       return;
     }
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
-      return;
-    }
 
     const title = active.title.trim() || 'Workout';
     const body = paused ? `Paused · ${display}` : display;
@@ -166,11 +180,19 @@ export class WorkoutOsNotificationService {
     if (key === this.lastNotifKey) {
       return;
     }
-    // Tick updates must only change when the clock text changes (already keyed above).
     if (fromTick && paused) {
       return;
     }
     this.lastNotifKey = key;
+
+    if (this.isNativeAndroid) {
+      await this.postAndroidNotification(title, body, active, fromTick);
+      return;
+    }
+
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      return;
+    }
 
     const options: NotificationOptions & { renotify?: boolean } = {
       body,
@@ -189,7 +211,6 @@ export class WorkoutOsNotificationService {
         await reg.showNotification(title, options);
         return;
       }
-      // Avoid constructing Notification every second on desktop — SW path preferred.
       if (fromTick) {
         return;
       }
@@ -208,6 +229,71 @@ export class WorkoutOsNotificationService {
     } catch {
       /* ignore */
     }
+  }
+
+  private async postAndroidNotification(
+    title: string,
+    body: string,
+    active: ActiveWorkoutSession,
+    _fromTick: boolean
+  ): Promise<void> {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      if (this.nativePermGranted === false) {
+        return;
+      }
+      if (this.nativePermGranted !== true) {
+        const perm = await LocalNotifications.checkPermissions();
+        this.nativePermGranted = perm.display === 'granted';
+        if (!this.nativePermGranted) {
+          return;
+        }
+      }
+      await this.ensureAndroidChannel(LocalNotifications);
+
+      const payload = {
+        id: NATIVE_NOTIF_ID,
+        title,
+        body,
+        largeBody: body,
+        summaryText: APP_BRAND.name,
+        channelId: ANDROID_CHANNEL_ID,
+        ongoing: true,
+        autoCancel: false,
+        silent: true,
+        isExactNotification: false,
+        extra: {
+          workoutId: active.workoutId,
+          url: `/app/workouts/${active.workoutId}`
+        }
+      };
+
+      // Same id replaces the shade entry (works for delivered + ongoing).
+      await LocalNotifications.schedule({ notifications: [payload] });
+    } catch {
+      /* ignore — permission / plugin */
+    }
+  }
+
+  private ensureAndroidChannel(
+    LocalNotifications: typeof import('@capacitor/local-notifications').LocalNotifications
+  ): Promise<void> {
+    if (!this.androidChannelReady) {
+      this.androidChannelReady = LocalNotifications.createChannel({
+        id: ANDROID_CHANNEL_ID,
+        name: 'Live workout',
+        description: 'Active workout timer in the notification shade',
+        // LOW: visible in shade, no sound / heads-up on each tick
+        importance: 2,
+        visibility: 1,
+        sound: undefined,
+        vibration: false,
+        lights: false
+      }).catch(() => {
+        /* channel may already exist with different settings */
+      });
+    }
+    return this.androidChannelReady;
   }
 
   private async ensureMediaSession(active: ActiveWorkoutSession, paused: boolean): Promise<void> {
@@ -304,7 +390,6 @@ export class WorkoutOsNotificationService {
     const ctx = new AC();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    // Extremely quiet — keeps session alive without an audible tone.
     gain.gain.value = 0.00001;
     osc.frequency.value = 20;
     osc.connect(gain);
@@ -372,6 +457,18 @@ export class WorkoutOsNotificationService {
   }
 
   private async clearNotifications(): Promise<void> {
+    if (this.isNativeAndroid) {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        await LocalNotifications.cancel({ notifications: [{ id: NATIVE_NOTIF_ID }] });
+        await LocalNotifications.removeDeliveredNotificationsById({
+          ids: [NATIVE_NOTIF_ID]
+        });
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     try {
       const reg = await this.ensureServiceWorker();
       if (reg) {
@@ -408,6 +505,9 @@ export class WorkoutOsNotificationService {
   private detectIos(): boolean {
     if (typeof navigator === 'undefined') {
       return false;
+    }
+    if (Capacitor.getPlatform() === 'ios') {
+      return true;
     }
     const ua = navigator.userAgent || '';
     const iOS = /iPad|iPhone|iPod/.test(ua);

@@ -176,7 +176,6 @@ export class WorkoutsComponent implements OnInit {
     this.api.updateWorkout(id, this.form.getRawValue()).subscribe({
       next: () => {
         this.cancelEdit();
-        this.toast.success('Workout updated');
         this.reload();
       },
       error: () => {
@@ -341,7 +340,6 @@ export class WorkoutsComponent implements OnInit {
       this.api.resumeWorkout(row.id).subscribe({
         next: () => {
           this.session.start(row.id, row.name, row.elapsedMs ?? 0);
-          this.toast.success('Session resumed');
           void this.router.navigate(['/app/workouts', row.id]);
         },
         error: () => this.toast.error('Could not resume session')
@@ -349,7 +347,6 @@ export class WorkoutsComponent implements OnInit {
       return;
     }
     this.session.start(row.id, row.name, row.elapsedMs ?? 0);
-    this.toast.success('Session continued');
     void this.router.navigate(['/app/workouts', row.id]);
   }
 

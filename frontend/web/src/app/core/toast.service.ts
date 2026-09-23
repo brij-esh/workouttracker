@@ -8,6 +8,10 @@ export interface ToastMessage {
   text: string;
 }
 
+/**
+ * In-app toasts. Prefer errors + major confirmations only
+ * (start/end session, create/delete entities, offline sync) — not every set/tap.
+ */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 1;

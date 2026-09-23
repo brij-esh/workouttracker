@@ -250,7 +250,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   async refreshContact(): Promise<void> {
     try {
       await this.auth.reloadCurrentUser();
-      this.toast.success('Contact details refreshed');
     } catch {
       this.toast.error('Could not refresh account');
     }
@@ -358,9 +357,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const result = await this.stepsPlatform.setDeviceSyncEnabled(next);
       if (result === 'denied') {
         this.toast.error('Phone step access was denied');
-        return;
       }
-      this.toast.success(next ? 'Phone step sync enabled' : 'Phone step sync disabled');
     } finally {
       this.syncBusy.set(null);
     }
@@ -376,9 +373,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const result = await this.stepsPlatform.setWearableSyncEnabled(next);
       if (result === 'denied') {
         this.toast.error('Wearable access was denied');
-        return;
       }
-      this.toast.success(next ? 'Wearable sync enabled' : 'Wearable sync disabled');
     } finally {
       this.syncBusy.set(null);
     }
@@ -401,7 +396,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
 
       if (this.isNew()) {
-        this.toast.success(`Region set to ${detected.label} — save your profile to keep it`);
         return;
       }
 
@@ -416,7 +410,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (profile) => {
             this.profile.set(profile);
-            this.toast.success(`Region set to ${detected.label}`);
           },
           error: () => this.toast.error('Could not save region')
         });

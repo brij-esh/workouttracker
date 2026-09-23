@@ -409,7 +409,6 @@ export class NutritionComponent implements OnInit, OnDestroy {
       },
       { emitEvent: false }
     );
-    this.toast.success(`Selected ${food.name}`);
   }
 
   clearSelectedFood(): void {
@@ -709,7 +708,6 @@ export class NutritionComponent implements OnInit, OnDestroy {
         this.savingMeal.set(false);
         this.mealForm.patchValue({ name: '', notes: '' });
         this.reload(body.mealDate);
-        this.toast.success('Food saved');
         this.error.set(null);
       },
       error: (err: HttpErrorResponse) => {
@@ -741,7 +739,6 @@ export class NutritionComponent implements OnInit, OnDestroy {
         this.savingWater.set(false);
         this.waterForm.patchValue({ notes: '' });
         this.reload(body.loggedOn);
-        this.toast.success('Water log saved');
         this.error.set(null);
       },
       error: (err: HttpErrorResponse) => {
@@ -757,7 +754,6 @@ export class NutritionComponent implements OnInit, OnDestroy {
     this.api.deleteMeal(id).subscribe({
       next: () => {
         this.reload();
-        this.toast.success('Food deleted');
       },
       error: () => this.toast.error('Could not delete food')
     });
@@ -767,7 +763,6 @@ export class NutritionComponent implements OnInit, OnDestroy {
     this.api.deleteWater(id).subscribe({
       next: () => {
         this.reload();
-        this.toast.success('Water log deleted');
       },
       error: () => this.toast.error('Could not delete water log')
     });

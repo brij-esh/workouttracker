@@ -149,7 +149,6 @@ export class WorkoutPlanDetailComponent implements OnInit {
           });
           this.savingName.set(false);
           this.editingName.set(false);
-          this.toast.success('Plan name updated');
         },
         error: () => {
           this.savingName.set(false);
@@ -226,7 +225,6 @@ export class WorkoutPlanDetailComponent implements OnInit {
         next: (updated) => {
           this.savingSchedule.set(false);
           this.plan.set({ ...updated, schedule: updated.schedule ?? [] });
-          this.toast.success('Week schedule updated');
         },
         error: () => {
           this.savingSchedule.set(false);

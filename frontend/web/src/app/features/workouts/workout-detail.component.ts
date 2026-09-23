@@ -1,10 +1,11 @@
-import { Component, HostListener, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
 import { ActiveWorkoutSessionService } from '../../core/active-workout-session.service';
+import { AndroidBackButtonService } from '../../core/android-back-button.service';
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import { RestTimerService } from '../../core/rest-timer.service';
 import { WorkoutCalorieService } from '../../core/workout-calorie.service';
@@ -33,6 +34,8 @@ export class WorkoutDetailComponent implements OnInit {
   readonly rest = inject(RestTimerService);
   private readonly confirmDlg = inject(ConfirmDialogService);
   private readonly calories = inject(WorkoutCalorieService);
+  private readonly androidBack = inject(AndroidBackButtonService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly workout = signal<Workout | null>(null);
   readonly exercises = signal<WorkoutExercise[]>([]);
@@ -75,6 +78,15 @@ export class WorkoutDetailComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(
+      this.androidBack.registerOverlay(() => {
+        if (!this.modalOpen()) {
+          return false;
+        }
+        this.closeModal();
+        return true;
+      })
+    );
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       void this.router.navigateByUrl('/app/workouts');
@@ -179,7 +191,6 @@ export class WorkoutDetailComponent implements OnInit {
           this.loadSets(workoutId, ex.id);
           this.loadExercises(workoutId);
           this.expandedExerciseId.set(ex.id);
-          this.toast.success('Set added');
         },
         error: () => this.toast.error('Could not add set')
       });
@@ -243,7 +254,6 @@ export class WorkoutDetailComponent implements OnInit {
       next: () => {
         this.loadSets(workoutId, ex.id);
         this.loadExercises(workoutId);
-        this.toast.success('Set removed');
       },
       error: () => this.toast.error('Could not remove set')
     });
@@ -286,7 +296,6 @@ export class WorkoutDetailComponent implements OnInit {
           this.workout.set(updated);
           this.session.start(workout.id, workout.name, workout.elapsedMs ?? 0);
           this.session.show();
-          this.toast.success('Session resumed');
         },
         error: () => this.toast.error('Could not resume session')
       });
@@ -294,7 +303,6 @@ export class WorkoutDetailComponent implements OnInit {
     }
     // IN_PROGRESS without local timer — attach
     this.session.start(workout.id, workout.name, workout.elapsedMs ?? 0);
-    this.toast.success('Workout timer started');
   }
 
   private maybeAttachSession(workout: Workout): void {
@@ -328,7 +336,6 @@ export class WorkoutDetailComponent implements OnInit {
         this.workout.set(updated);
         this.session.resume();
         this.session.show();
-        this.toast.success('Session running');
       },
       error: () => this.toast.error('Could not resume session')
     });
@@ -461,7 +468,6 @@ export class WorkoutDetailComponent implements OnInit {
         if (!updating) {
           this.expandedExerciseId.set(saved.id);
         }
-        this.toast.success(updating ? 'Exercise updated' : 'Exercise added — add your sets');
       },
       error: () => {
         this.saving.set(false);

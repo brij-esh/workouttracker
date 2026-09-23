@@ -1,8 +1,9 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
+import { AndroidBackButtonService } from '../../core/android-back-button.service';
 import { ConfirmDialogService } from '../../core/confirm-dialog.service';
 import {
   ExerciseDifficulty,
@@ -24,6 +25,8 @@ export class ExerciseLibraryComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmDialogService);
+  private readonly androidBack = inject(AndroidBackButtonService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly pageSize = 24;
   readonly rows = signal<LibraryExercise[]>([]);
@@ -57,6 +60,15 @@ export class ExerciseLibraryComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(
+      this.androidBack.registerOverlay(() => {
+        if (!this.modalOpen()) {
+          return false;
+        }
+        this.closeModal();
+        return true;
+      })
+    );
     this.api.getExerciseLibraryMeta().subscribe({
       next: (meta) => {
         this.muscleGroups.set(meta.muscleGroups);
@@ -174,7 +186,9 @@ export class ExerciseLibraryComponent implements OnInit {
       next: () => {
         this.saving.set(false);
         this.closeModal();
-        this.toast.success(id ? 'Exercise updated' : 'Custom exercise added');
+        if (!id) {
+          this.toast.success('Custom exercise added');
+        }
         this.loadPage(this.page());
       },
       error: () => {

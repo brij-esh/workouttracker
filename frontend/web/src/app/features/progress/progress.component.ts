@@ -468,7 +468,6 @@ export class ProgressComponent implements OnInit {
       next: (overview) => {
         this.saving.set(false);
         this.bodyOverview.set(overview);
-        this.toast.success('Goal weight saved');
       },
       error: () => {
         this.saving.set(false);
@@ -800,9 +799,6 @@ export class ProgressComponent implements OnInit {
           });
         }
         this.reloadBody();
-        if (!(row as WeightLog & { pendingSync?: boolean })?.pendingSync) {
-          this.toast.success(id ? 'Weight updated' : 'Weight saved');
-        }
         this.nutritionSync.syncAfterWeightLogChange().subscribe({ error: () => undefined });
       },
       error: (err) => {
@@ -833,9 +829,6 @@ export class ProgressComponent implements OnInit {
           });
         }
         this.reloadBody();
-        if (!(row as PersonalRecord & { pendingSync?: boolean })?.pendingSync) {
-          this.toast.success(id ? 'Personal record updated' : 'Personal record saved');
-        }
       },
       error: () => {
         this.saving.set(false);

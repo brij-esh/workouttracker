@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Repwise</string>
+    <string name="title_activity_main">Repwise</string>
+    <string name="package_name">com.repwise.app</string>
+    <string name="custom_url_scheme">com.repwise.app</string>
+</resources>
